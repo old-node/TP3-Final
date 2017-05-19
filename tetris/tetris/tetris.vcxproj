@@ -150,10 +150,13 @@
     <ClCompile Include="tetris.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\amenagement.h" />
     <ClInclude Include="..\..\include\bloc.h" />
     <ClInclude Include="..\..\include\carre.h" />
-    <ClInclude Include="..\..\include\saisieSecurisee.h" />
-    <ClInclude Include="..\..\include\salle.h" />
+    <ClInclude Include="..\..\include\contact.h" />
+    <ClInclude Include="..\..\include\contenu.h" />
+    <ClInclude Include="..\..\include\contexte.h" />
+    <ClInclude Include="..\..\include\saisieSFML.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

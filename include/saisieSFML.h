@@ -1,18 +1,18 @@
-/* En-tête du fichier
-======================
-Fichier:	    saisieSecurisee.h
-Auteur:         Olivier Lemay Dostie
-Date création:  16/02/2017
-Description:    Fichier qui regroupe toutes les fonctions des laboratoires 
-.				de saisie et de validation en console, ainsi que l’ouverture 
-.				de fichier et le test de fichier vide. */
+/* En-tête du fichier */
+///===================*/
+/* Fichier:			saisieSFML.h
+// Auteur:			Olivier Lemay Dostie et Jean-Alain Sainton
+// Date création:	16/02/2017
+// Description:		Fichier qui regroupe les fonctions des saisies avec SFML.
+//					Permet des saisies et de validations graphiques, ainsi que l’ouverture 
+//					et la vérification de l'état de fichiers. */
 
 /*Directives au pré-processeur.
 ==========================*/
 #pragma once
-#include <string>
-#include <iostream>
-#include <fstream>
+#include <string>			
+#include <iostream>			
+#include <fstream>			
 using namespace std;
 
 /* Fonctions.

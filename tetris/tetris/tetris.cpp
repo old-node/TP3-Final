@@ -8,7 +8,6 @@
 
 /* Directives au pré-processeur */
 ///============================ */
-#include <saisieSecurisee.h>	
 #include <iomanip>				
 #include <locale>				
 #include <string>				
@@ -18,7 +17,9 @@
 using namespace std;
 #include <SFML/Graphics.hpp>	
 #include <SFML/Audio.hpp>		
-#include <salle.h>				// Contient bloc.h qui contient carre.h
+#include <saisieSFML.h>			
+#include <contact.h>			// Contient contenu.h qui contient contexte.h
+#include <amenagement.h>		// Contient bloc.h qui contient carre.h
 using namespace sf;
 
 
@@ -44,11 +45,6 @@ int questionEnregistrement(RenderWindow & window2, Font font, identite & identit
 void afficherScore(RenderWindow & windowMenu);
 void trierInsertion(char nomJoueur[][20], int scoreMax[], int taille);
 void enregistrerScore(RenderWindow & window, identite & identite);
-
-
-/* Constantes pour le programme principal */
-///====================================== */
-const double PI = atan(1) * 4;	// Valeur de pi (nécessaire?)
 
 
 /* Programme principal */
@@ -77,11 +73,11 @@ int main()
 	Text titre[6];
 	initTitre(titre, font, 110, 10, 60);
 
-	font.loadFromFile("styles/font_arial.ttf");// Choix de la police à utiliser
+	font.loadFromFile("styles/font_arial.ttf");	// Choix de la police à utiliser
 	Text textAngle;
 	textAngle.setFont(font);
-	textAngle.setCharacterSize(LRGPOLICE);	// Taille des caractères exprimée en pixels, pas en points !						 
-	textAngle.setColor(Color::Black);		// Couleur du texte
+	textAngle.setCharacterSize(LRGPOLICE);		// Taille des caractères exprimée en pixels, pas en points !						 
+	textAngle.setColor(Color::Black);			// Couleur du texte
 	textAngle.setPosition(Vector2f(60, DIMSALLE.y + 150));		// Position du texte
 	Text textPos = textAngle;
 	textPos.setPosition(Vector2f(120, DIMSALLE.y + 150));
@@ -94,7 +90,7 @@ int main()
 	Music music2;
 	Music music3;
 	vector<Vector2i> occupations;
-	salle espace(window, "styles/font_arial.ttf", POS, 1, 1, occupations, nomJoueur, 1, 0, 0, milliseconds(800), tetris, 7);
+	amenagement espace(window, "styles/font_arial.ttf", POS, 1, 1, occupations, nomJoueur, 1, 0, 0, milliseconds(800), tetris, 7);
 
 	Music music;
 	music.stop();
@@ -117,10 +113,11 @@ int main()
 		score = 0;
 	int identiteEnregistrer, reponse = 1;
 
-	font.loadFromFile("styles/font_arial.ttf");// Choix de la police à utiliser
+	font.loadFromFile("styles/font_arial.ttf");	// Choix de la police à utiliser
 
-										// Fenêtre d'enregistrements
-	window2.create(VideoMode(500, 500), "TETRIS v1.2 Nom du identite");
+
+	// Saisie du nom du joueur.
+	window2.create(VideoMode(500, 500), "Nom du joueur de TETRIS");
 	do
 	{
 		saisirNomJoueur(window2, font, texture, espace.getJoueur());
@@ -137,17 +134,16 @@ int main()
 
 	window2.close();
 
-	window.create(VideoMode(POSAFFICHE.x + 300 + LRGPOLICE, DIMSALLE.y + 200), "TETRIS Jeu");
+	window.create(VideoMode(POSAFFICHE.x + 300 + LRGPOLICE, DIMSALLE.y + 200), "TETRIS");
 	Image icon;
 	icon.loadFromFile("images/icon.png");
 	window.setIcon(128, 128, icon.getPixelsPtr()); //Affiche l'icone de Tétris
 
 	afficherMenu(window, titre, music, music2, music3, texture, font, espace.getJoueur());
-
-	/// Peut être gossant quand on fait des tests XD
-	//if (music.getStatus() == false)	
-	//	music.play();
-
+	
+	if (music.getStatus() == false)
+		music.play();
+	
 	window.draw(background);
 
 	window.display();
@@ -161,22 +157,15 @@ int main()
 		int posy, posx;
 		int nbY = 0;
 
-		//espace.afficherInterface(window);
-		//espace.modifierInterface(window, prochain, profil, identite.nomJoueur, identite.level, identite.score);
-
 		do {
-			Sprite background(texture);
+			
 			window.draw(background);
-
-			espace.afficherInterface();
-			//espace.modifierInterface(window, prochain, profil, identite.nomJoueur, identite.level, identite.score);
-			//active.drawBloc(window, active.getAngle());
 
 			if (tempsEcoule.getElapsedTime() > espace.getVitesse())
 			{
 				tempsEcoule.restart();
 				moment.asMilliseconds();	/// Utile ? Clock peut faire la job je crois
-				mouvement = 0;
+				//mouvement = 0;
 			}
 			else
 			{
@@ -223,23 +212,21 @@ int main()
 			// Si une colision est présente
 			if (espace.getColle())
 			{
-				// Ajoute le bloc actif aux occupation de la salle 
+				// Ajoute le bloc actif aux occupation de l'aménagement 
 				// Démare ensuite le prochain bloc tout en trouvant le bloc suivant
 				espace.colleActif();
 				espace.setColle(false);
 			}
 
-			//window.clear();
 			window.draw(background);
-			//afficheTitre(window, titre);
+			afficheTitre(window, titre);
 			window.draw(f);
 			espace.afficherInterface();
-			//espace.montreProchain();
 			espace.afficheBlocsSalle();
 			afficheTitre(window, titre);
 
 			espace.drawActif();
-			//espace.getBloc().draw(window);
+			
 			textPos.setString(to_string(espace.getActif().getAngle())); 	// Chaîne de caractères à afficher
 			window.draw(textPos);
 			string place = to_string(espace.getActif().getPlace().x)
@@ -308,7 +295,7 @@ int questionOuiNonSFML(RenderWindow & window2, identite &joueur)
 	}
 }
 
-// 
+// Enregistre le score du joueur dans un fichier.
 void enregistrerScore(RenderWindow & window, identite &joueur) {
 
 	window.clear();
@@ -332,20 +319,19 @@ void enregistrerScore(RenderWindow & window, identite &joueur) {
 			text.setString("Voulez vous enregistrer par-dessus votre ancienne sauvegarde? (o / n)? : ");
 			window.draw(text);
 			window.display();
-
 		}
 		else {
 			window.display();
 			text.setString("Voulez vous enregistrer votre score? (o / n)? : ");
 			window.draw(text);
 			window.display();
-
-
 		}
 		reponse = questionOuiNonSFML(window, joueur);
 	} while (reponse != 1 && reponse != 2);
 
-	if (reponse == 1) {						//Enregistre tout les score dans un tableau
+
+	//Enregistre tout les score dans un tableau
+	if (reponse == 1) {		
 
 		ifstream vieuxscore;
 		ofstream nouveauscore;
@@ -353,13 +339,13 @@ void enregistrerScore(RenderWindow & window, identite &joueur) {
 		vieuxscore.open("score.txt", ifstream::in | ifstream::out | ifstream::app);
 		nouveauscore.open("score.txt", ofstream::in | ofstream::out | ofstream::app);
 
-		char listeNomJoueur[20][20] = { '\0' };				//maximum de 30 identite enregistrer
+		char listeNomJoueur[20][20] = { '\0' };				//maximum de 30 joueur enregistrer
 		int levelMax[20];
 		int scoreMax[20];
 
 		int cptJoueur = 0;
 
-		if (joueur.nouveauJoueur == false) {					//si le identite existe, remplace sont score par le nouveau
+		if (joueur.nouveauJoueur == false) {				//si le joueur existe, remplace sont score par le nouveau
 			while (vieuxscore >> listeNomJoueur[cptJoueur])
 			{
 				vieuxscore >> levelMax[cptJoueur];
@@ -374,21 +360,19 @@ void enregistrerScore(RenderWindow & window, identite &joueur) {
 			trierInsertion(listeNomJoueur, scoreMax, cptJoueur);
 
 
-
-
-			for (int i = 0; i < joueur.rang - 1; i++)		// Écrit tout les autre identite avant
+			for (int i = 0; i < joueur.rang - 1; i++)		// Écrit tout les autre joueur avant
 			{
 				nouveauscore << left << setw(20) << listeNomJoueur[i] << setw(20) << levelMax[i] << scoreMax[i] << endl;
 			}
 			nouveauscore << left << setw(20) << joueur.nomJoueur << setw(20) << joueur.level << joueur.score;
 
-			for (int i = 0 + joueur.rang; i < cptJoueur; i++) // Écrit tout les autre identite apres
+			for (int i = 0 + joueur.rang; i < cptJoueur; i++) // Écrit tout les autre joueur apres
 			{
 				nouveauscore << endl << left << setw(20) << listeNomJoueur[i] << setw(20) << levelMax[i] << scoreMax[i];
 			}
 		}
 
-		else										//inscrit le nouveau identite a la fin de la liste de score
+		else										//inscrit le nouveau joueur a la fin de la liste de score
 		{
 			nouveauscore << endl << left << setw(20) << joueur.nomJoueur << setw(20) << joueur.level << joueur.score;
 			joueur.nouveauJoueur = false;
@@ -397,18 +381,18 @@ void enregistrerScore(RenderWindow & window, identite &joueur) {
 	}
 }
 
-// 
+// Affiche le score des anciens joueurs.
 void afficherScore(RenderWindow &windowMenu)
 {
 
 	Text text;
 	Font font;
 	Texture texture;
-	if (!font.loadFromFile("styles/font_arial.ttf"));		//va chercher la police pour le texte
-	if (!texture.loadFromFile("images/back_main.jpg"));	//va chercher le fond d'écran
+	if (!font.loadFromFile("styles/font_arial.ttf"));	// Va chercher la police pour le texte
+	if (!texture.loadFromFile("images/back_main.jpg"));	// Va chercher le fond d'écran
 
 	Sprite background(texture);
-	windowMenu.draw(background);		//affiche le fond d'écran	
+	windowMenu.draw(background);						//Affiche le fond d'écran	
 
 	text.setFont(font);
 	text.setColor(Color::Red);
@@ -435,6 +419,7 @@ void afficherScore(RenderWindow &windowMenu)
 	text.setString("Score");
 	windowMenu.draw(text);
 
+	// Affiche les dix dernier meilleurs joueurs 
 	for (size_t i = 0; i < 10; i++)
 	{
 		fichierScore >> nomJoueur >> lvl >> score;
@@ -454,36 +439,25 @@ void afficherScore(RenderWindow &windowMenu)
 	}
 	windowMenu.display();
 
+	// Vérifie les évènements
 	Event event;
 	while (windowMenu.isOpen())
 	{
-
-
 		while (windowMenu.pollEvent(event))
 		{
-			// check the type of the event...
 			switch (event.type)
 			{
-				// window closed
-			case Event::Closed:
-			{
+			case Event::Closed:		// window closed
 				exit(0);
-			}
-			// key pressed
-			case Event::KeyPressed:
-
+			case Event::KeyPressed:	// key pressed
 				if (event.key.code == Keyboard::Escape) // Pour quitter
-				{
 					return;
-
-				}
-
 			}
 		}
 	}
 }
 
-// 
+// Demande la saisie pour si le joueur veut continuer avec une ancienne sauvegarde.
 int questionEnregistrement(RenderWindow & window2, Font font, identite & identite)
 {
 	window2.clear();
@@ -495,7 +469,7 @@ int questionEnregistrement(RenderWindow & window2, Font font, identite & identit
 
 	if (!font.loadFromFile("styles/font_arial.ttf")); // choix de la police à utiliser
 	text.setFont(font);
-	text.setString("Ce nom appartient a un identite contenant \nles statistiques suivante :");
+	text.setString("Ce nom appartient a un joueur contenant \nles statistiques suivante :");
 	text.setCharacterSize(22);
 	text.setPosition(25, 100);
 	text.setColor(Color::Black);
@@ -524,15 +498,12 @@ int questionEnregistrement(RenderWindow & window2, Font font, identite & identit
 	/*window2.draw(identiteEnregistrer);*/
 	window2.display();
 	if (questionOuiNonSFML(window2, identite) != 1)
-	{
-
 		return 2;
-	}
 	identite.nouveauJoueur = false;
 	return 1;
 }
 
-// 
+// Trie les enregistrements. (Laby ?)
 int listeEnregistrement(RenderWindow & window2, identite & identite)
 {
 	ifstream labyrinthe;
@@ -564,14 +535,11 @@ int listeEnregistrement(RenderWindow & window2, identite & identite)
 
 		if (identite.nomJoueur == sauvegardeNomJoueur)
 		{//si le nom entrer existe dans le fichier score
-
 			sauvegardeExiste = true;
 			break;
 		}
-		else {
-
+		else
 			sauvegardeExiste = false;
-		}
 
 	}
 
@@ -584,11 +552,9 @@ int listeEnregistrement(RenderWindow & window2, identite & identite)
 	}
 	else
 		return 2;
-
-
 }
 
-// 
+// Saisie le nom du joueur.
 void saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identite & joueur)
 {
 	Image icon;

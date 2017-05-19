@@ -25,15 +25,18 @@ struct identite
 {
 	string nomJoueur;
 	bool nouveauJoueur = true;
-	int level = 1,
-		score = 0,
-		rang = 0;
+	int noJoueur,
+		rang = 0,
+		level = 1,
+		score = 0;
 };
 
 /* Prototype des fonctions */
 ///======================= */
 // Les pivots des blocs par défaut sont : 2,2 - 2,2 - 2.5,2.5 - 2,2 - 2,2 - 2,2 - 2,2
-class salle;
+class amenagement;
+Text initText(Font & police, string message, int mesure,
+	Color couleur, Vector2f & pos, Vector2f decalage);
 bool initPieces(bloc * blocsJeu, const int & nbPiece, const vector<Vector2i> pieces[NBPIECE][4]);
 bool modifieEncrageBlocs();
 int alleatoire(const int & max, const int & indice);
@@ -49,11 +52,13 @@ const bool ko = modifieEncrageBlocs();
 const bloc TETRIS = *tetris;
 
 
+
+
 /* Constantes pour les salles */
 ///========================== */
 const int LRGPOLICE = 24;
 const int NBCHARMAX = 30;				// Nb de caractère maximum dans un message
-const Vector2f DIMSALLE					// Dimmension par défaut de la salle
+const Vector2f DIMSALLE					// Dimmension par défaut de l'aménagement
 /**/(DIMCARRE.x * LRGJEU, DIMCARRE.y * HAUJEU);
 const Vector2i PIVOTSALLE				// Point pivot des salles
 /**/(DIMSALLE.x / 2, DIMSALLE.y / 2);
@@ -69,7 +74,7 @@ const Keyboard::Key CONTROLES[3][6] =	// Contrôles des joueurs en mode Multijou
 
 /* Objet salle pour afficher ouvrir, jouer et manipuler le jeu principal */
 ///===================================================================== */
-class salle
+class amenagement
 {
 private:
 	int _occupations					// Zones où les blocs ne doivent pas pouvoir passer (murs)
@@ -78,6 +83,7 @@ private:
 	int _id = 0;
 	vector<bloc> _blocsFixes;			// Tout les blocs qui d'ont le joueur à perdu le contrôle
 
+	bool _defaut = true;				// Condition vérifiant si les blocs sont de formes typiques du jeu
 	int _nbPiece = NBPIECE;				// Nombre de pièces disponible dans le niveau
 	bloc *_blocsJeu[NBPIECE];			// La liste des blocs disponibles
 	bloc _blocActif;  					// Le bloc avec lequel on joue présentement
@@ -85,13 +91,12 @@ private:
 
 	Time _vitesseBloc = milliseconds(800); // Vitesse du bloc actif
 	int _noNiveau = 1;					// Numéro du niveau actuel du jeu
+	int _gradin = 100;					// Nombre de points à aquérir pour se rendre au prochain niveau.
 	int _styleBlocs = 1;				// Textures, couleurs, etc. (nécessaire?)
-	int _orientation = 1;				// Si on fait tourner la salle
+	int _orientation = 1;				// Si on fait tourner l'aménagement
 
-	identite _joueur;					// Joueur de la salle et ses attributs
+	identite _joueur;					// Joueur de l'aménagement et ses attributs
 	string _nomJoueur = "Joueur";		// Nom du joueur
-	int _noJoueur = 0;					// En mode multijoueur de 1 à 2. Permet d'utiliser les bon contrôles
-	int _points = 0;					// Score que le joueur à accumulé
 	bool _colle = false;				// État du jeu lorsqu'un bloc reste piégé (Passe au prochain avec colle)
 	bool _permis = true;				// Si vrai, laisse le joueur faire des actions
 	int _nbBombe = 1;					// Autre option lol
@@ -100,7 +105,7 @@ private:
 	Font _police;
 
 	// Lieu principal du jeu
-	Vector2f _pos = POS;				// Position de la salle dans la fenêtre
+	Vector2f _pos = POS;				// Position de l'aménagement dans la fenêtre
 	RectangleShape _boite;				// Lieu	où l'on affiche l'espace de jeu
 
 	// Lieu des statistiques
@@ -115,38 +120,81 @@ private:
 	Text _textAide;
 
 
-	// Méthodes privates
+	// Méthodes privées
 	void videOccupations();
 	void videBlocsJeu();
 
 	void placeMurs();
 
+	bool colisionActifTourne(const vector<Vector2i> & axes);
+	bool defautRotation(const bool & sens, int & angle)
+		// Empèche certains blocs de faire des rotations
+	{
+		if (_defaut)
+		{
+			if (_blocActif.getPiece() == 2)
+				return 1;
+			if (_blocActif.getPiece() == 5 || _blocActif.getPiece() == 6)
+				if (sens)
+				{
+					if (angle == 2)
+					{
+						_blocActif.tourneDroite();
+						angle = 0;
+						return 1;
+					}
+				}
+				else
+				{
+					if (angle == 3)
+					{
+						_blocActif.tourneGauche();
+						angle = 1;
+						return 1;
+					}
+				}
+		}
+		return 0;
+	}
 	bool pivoteActif(int angle);
-	bool colisionActifTourne(const vector<Vector2i>& axes);
+	bool defautDeplacement(const int & sens)
+		// Utile seulement si des blocs ne doivent pas se 
+		//	déplacer dans une dirrection horizontale
+	{
+		if (_defaut && (_blocActif.getPlace().x < -2 ||
+			_blocActif.getPlace().x >= LRGJEU - 1))
+		{
+			if (_blocActif.getPiece() == 5)
+				return 0;
+			if (_blocActif.getPiece() == 6)
+				return 0;
+		}
+		return 0;
+	}
 
 	void prochain();
 
 public:
 	// Instanciatieurs
-	salle(RenderWindow & window, string police, string nomJoueur);
-	salle(RenderWindow & window, string police, Vector2f pos, int noNiveau, int orientation,
+	amenagement(RenderWindow & window, string police, string nomJoueur);
+	amenagement(RenderWindow & window, string police, Vector2f pos, int noNiveau, int orientation,
 		vector<Vector2i> occupation, string nomJoueur, int noJoueur, int points, int nbBombe,
-		Time vitesse, const bloc blocsJeu[], const int & nbPiece);
+		Time vitesse, bloc blocsJeu[], const int & nbPiece);
 
 	// Destructeurs
-	~salle();
+	~amenagement();
 
-	// Préparations de la salle
+	// Préparations de l'aménagement
 	void init(Vector2f pos, int noNiveau, int orientation, vector<Vector2i> occupation,
 		string nomJoueur, int noJoueur, int points, int nbBombe, Time vitesse,
-		const bloc blocsJeu[], const int & nbPiece);
-	void initBlocsJeu(const bloc pieces[], const int & nbPiece);
+		bloc blocsJeu[], const int & nbPiece);
+	void initBlocsJeu(bloc pieces[], const int & nbPiece);
 	void initFont(string police);
 	void initStatistiques();
 	void recharche(int noNiveau);
 	void demare();
 
-	// Changements des attributs de la salle
+	// Changements des attributs de l'aménagement
 	void setPos(Vector2f pos);
 	void setNoNiveau(int noNiveau);
 	void setId(const int & id)
@@ -156,15 +204,24 @@ public:
 	void setOrientation(int orientation);
 	void setNomJoueur(string nomJoueur);
 	void setNoJoueur(int noJoueur);
-	void setPoints(int points);
+	void setScore(int points);
+	void diffScore(const int & diff)
+	{
+		if (_joueur.score += diff > _gradin)
+		{
+			diffVitesse(Time(milliseconds(-10)));
+			_gradin = 100 * _noNiveau;
+		}
+	}
 	void setColle(bool colision);
 	void setNbBombe(int nbBombe);
-	void setVitesse(Time vitesse);
+	void diffVitesse(Time vitesse);
 	void setActif(bloc actif);
 	void setProchain(bloc prochain);
 	void setInnocupationLigne(const int & y);
 	void setOccupationAbsolue(const vector<Vector2i> & axes);
 	void setOccupationRelative(const vector<Vector2i> & axes, Vector2i const & place);
+	void descente(const int & Y);
 	void creeObstacle();
 	void marcheArriere();
 	void brasse();
@@ -181,8 +238,8 @@ public:
 	// Déplacements et transformations du bloc actif
 	bool bougeActif(int X, int Y);
 	void tombeActif();
-	bool pivoteActifGauche();
 	bool pivoteActifDroite();
+	bool pivoteActifGauche();
 	void colleActif();
 	/// Rallentis la progression du bloc. (augmente le délais avant qu'il continu sa descente)
 	//void bloc::ralenti()
@@ -190,8 +247,7 @@ public:
 	//}
 	void arret(const bool & permis);
 
-
-	// Récupérations des attributs de la salle
+	// Récupérations des attributs de l'aménagement
 	string getNomJoueur();
 	Vector2f getPos();
 	int getNoNiveau();
@@ -230,7 +286,7 @@ public:
 // Instanciations de base */
 ///====================== */
 // Instancie une salle avec seulement le nom du joueur.
-salle::salle(RenderWindow & window, string police, string nomJoueur) : _window(window)
+amenagement::amenagement(RenderWindow & window, string police, string nomJoueur) : _window(window)
 {
 	initFont(police);
 	setNomJoueur(nomJoueur);
@@ -239,18 +295,18 @@ salle::salle(RenderWindow & window, string police, string nomJoueur) : _window(w
 	initStatistiques();
 }
 
-// Instancie la salle avec toutes ses valeurs.
-salle::salle(RenderWindow & window, string police, Vector2f pos, int noNiveau, int orientation,
+// Instancie l'aménagement avec toutes ses valeurs.
+amenagement::amenagement(RenderWindow & window, string police, Vector2f pos, int noNiveau, int orientation,
 	vector<Vector2i> occupation, string nomJoueur, int noJoueur, int points, int nbBombe,
-	Time vitesse, const bloc blocsJeu[], const int & nbPiece) : _window(window)
+	Time vitesse, bloc blocsJeu[], const int & nbPiece) : _window(window)
 {
 	initFont(police);
 	init(pos, noNiveau, orientation, occupation, nomJoueur,
 		noJoueur, points, nbBombe, vitesse, blocsJeu, nbPiece);
 }
 
-// Initialise la police de la salle
-void salle::initFont(string police)
+// Initialise la police de l'aménagement
+void amenagement::initFont(string police)
 {
 	_police.loadFromFile(police);
 }
@@ -258,7 +314,7 @@ void salle::initFont(string police)
 /* Destructeurs */
 ///============ */
 // Destructeur principal.
-salle::~salle()
+amenagement::~amenagement()
 {
 	Texture texture;
 	/// Pourquoi est-ce qu'on load une texture quand on veux les enlevers?
@@ -269,8 +325,7 @@ salle::~salle()
 	_boite = _statistiques = RectangleShape();
 
 	_joueur.~identite();	/// Peut-on utiliser delete au lieu?
-	_nomJoueur = "";
-	_pos.x = _pos.y = _noNiveau = _noJoueur = _points = _colle = _nbBombe =
+	_pos.x = _pos.y = _noNiveau = _colle = _nbBombe =
 		_styleBlocs = _orientation = 0;
 	_vitesseBloc.Zero;
 	videOccupations();
@@ -278,7 +333,7 @@ salle::~salle()
 }
 
 // Destructeur pour _occupations.
-void salle::videOccupations()
+void amenagement::videOccupations()
 {
 	_tuiles.resize(0);
 	_blocsFixes.resize(0);
@@ -288,7 +343,7 @@ void salle::videOccupations()
 }
 
 // Destructeur pour _blocsJeu.
-void salle::videBlocsJeu()
+void amenagement::videBlocsJeu()
 {
 	vector<carre> vide;
 	vector<Vector2i> axes[4];
@@ -296,29 +351,29 @@ void salle::videBlocsJeu()
 		(*_blocsJeu)[i].setFormes(vide, axes);
 }
 
-/* Modificateurs de la salle */
+/* Modificateurs de l'aménagement */
 ///========================= */
-// Initialise la salle avec toutes ses valeurs.
-void salle::init(Vector2f pos, int noNiveau, int orientation,
+// Initialise l'aménagement avec toutes ses valeurs.
+void amenagement::init(Vector2f pos, int noNiveau, int orientation,
 	vector<Vector2i> occupation, string nomJoueur, int noJoueur, int points, int nbBombe,
-	Time vitesse, const bloc blocsJeu[], const int & nbPiece)
+	Time vitesse, bloc blocsJeu[], const int & nbPiece)
 {
 	setPos(pos);
 	setNoNiveau(noNiveau);
 	setOrientation(orientation);
 	setOccupationAbsolue(occupation);
 	setNoJoueur(noJoueur);
-	setPoints(points);
+	setScore(points);
 	setNbBombe(nbBombe);
-	setVitesse(vitesse);
+	diffVitesse(vitesse);
 	initBlocsJeu(blocsJeu, nbPiece);
 	initStatistiques();
 
 	placeMurs();
 }
 
-// Remet la salle à ses valeurs de base en changeant son numéro.
-void salle::recharche(int noNiveau)
+// Remet l'aménagement à ses valeurs de base en changeant son numéro.
+void amenagement::recharche(int noNiveau)
 {
 	videOccupations();
 	placeMurs();
@@ -327,8 +382,8 @@ void salle::recharche(int noNiveau)
 	initBlocsJeu(tetris, 7);
 }
 
-// Charge les blocs par défaut dans la salle puis choisi les premiers blocs du jeu.
-void salle::initBlocsJeu(const bloc pieces[], const int & nbPiece)
+// Charge les blocs par défaut dans l'aménagement puis choisi les premiers blocs du jeu.
+void amenagement::initBlocsJeu(bloc pieces[], const int & nbPiece)
 {
 	bloc test;
 	for (int i = 0; i < NBPIECE; i++)
@@ -342,13 +397,13 @@ void salle::initBlocsJeu(const bloc pieces[], const int & nbPiece)
 }
 
 // Active les procédures du démarage du jeu.
-void salle::demare()
+void amenagement::demare()
 {
 
 }
 
 // Ajoude des tuiles aux murs et à la base pour qu'ils deviennent infranchissables.
-void salle::placeMurs()
+void amenagement::placeMurs()
 {
 	// Murs
 	for (int y = 0; y < HAUJEU; y++)
@@ -369,20 +424,9 @@ void salle::placeMurs()
 	}
 }
 
-Text initText(Font & police, string message, int mesure,
-	Color couleur, Vector2f & pos, Vector2f decalage)
-{
-	Text text(message, police, mesure);
-	text.setFillColor(couleur);
-	pos.x += decalage.x;
-	pos.y += decalage.y;
-	text.setPosition(pos);
-	return text;
-}
-
-/*Change les attributs de la salle*/
+/*Change les attributs de l'aménagement*/
 /// On devrait séparer l'initialisation et l'affichage pur n'avoir qu'à réinitialiser les choses qui changent.
-void salle::initStatistiques()
+void amenagement::initStatistiques()
 {
 	Vector2f posAffiche(POSAFFICHE.x - 15, POSAFFICHE.y);
 	Vector2f decalage = BASE;
@@ -430,77 +474,79 @@ void salle::initStatistiques()
 		LRGPOLICE, Color::Black, posAffiche, decalage);
 }
 
-// 
-void salle::setPos(Vector2f pos)
+// Change les coordonnées de l'espace dans la fenêtre.
+void amenagement::setPos(Vector2f pos)
 {
 	_pos = pos;
 }
 
-// 
-void salle::setNoNiveau(int noNiveau)
+// Modifie le numéro du niveau de l'aménagement.
+void amenagement::setNoNiveau(int noNiveau)
 {
 	_noNiveau = noNiveau;
 }
 
-// 
-void salle::setOrientation(int orientation)
+// Change l'orientation de l'aménagement.
+void amenagement::setOrientation(int orientation)
 {
 	_orientation = orientation;
 }
 
-// 
-void salle::setNomJoueur(string nomJoueur)
+// Modifie le nom du joueur.
+void amenagement::setNomJoueur(string nomJoueur)
 {
-	_nomJoueur = nomJoueur;
+	_joueur.nomJoueur = nomJoueur;
 }
 
-// 
-void salle::setNoJoueur(int noJoueur)
+// Donne au joueur un numéro pour l'identifier.
+void amenagement::setNoJoueur(int noJoueur)
 {
 	assert(noJoueur >= 0 && noJoueur <= 3);
-	_noJoueur = noJoueur;
+	_joueur.noJoueur = noJoueur;
 }
 
-// 
-void salle::setPoints(int points)
+// Modifie le score du joueur.
+void amenagement::setScore(int score)
 {
-	_points = points;
+	_joueur.score = score;
 }
 
-// 
-void salle::setColle(bool colision)
+// Change l'attribut des blocs pour qu'ils collent.
+void amenagement::setColle(bool colision)
 {
 	_colle = colision;
 }
 
-// 
-void salle::setNbBombe(int nbBombe)
+// Modifie le nombre de bombe disponible.
+void amenagement::setNbBombe(int nbBombe)
 {
 	assert(nbBombe >= 0);
 	_nbBombe = nbBombe;
 }
 
 // Change le délais entre chaque descente.
-void salle::setVitesse(Time vitesse)
+void amenagement::diffVitesse(Time vitesse)
 {
-	assert(vitesse >= milliseconds(0));
-	_vitesseBloc = vitesse;
+	if (_vitesseBloc + vitesse < milliseconds(5))
+		_vitesseBloc = milliseconds(5);
+	else
+		_vitesseBloc += vitesse;
 }
 
 // Change le bloc actif par un autre.
-void salle::setActif(bloc actif)
+void amenagement::setActif(bloc actif)
 {
 	_blocActif = actif;
 }
 
 // Change le bloc suivant par un autre.
-void salle::setProchain(bloc prochain)
+void amenagement::setProchain(bloc prochain)
 {
 	_blocProchain = prochain;
 }
 
-// Libère une des ligne des occupations de la salle.
-void salle::setInnocupationLigne(const int & y)
+// Libère une des ligne des occupations de l'aménagement.
+void amenagement::setInnocupationLigne(const int & y)
 {
 	for (int i = 1; i < LRGJEU; i++)
 	{
@@ -509,21 +555,54 @@ void salle::setInnocupationLigne(const int & y)
 }
 
 // Ajoute des occupations selon des axes dans le tableau
-void salle::setOccupationAbsolue(vector<Vector2i> const& axes)
+void amenagement::setOccupationAbsolue(vector<Vector2i> const& axes)
 {
 	for (auto const &element : axes)
 		_occupations[element.y][element.x] = 1;
 }
 
 // Ajoute des occupations selon des axes relatifs dans le tableau
-void salle::setOccupationRelative(vector<Vector2i> const & axes, Vector2i const & place)
+void amenagement::setOccupationRelative(vector<Vector2i> const & axes, Vector2i const & place)
 {
-	for (Vector2i const & element : axes)
-		_occupations[place.y + element.y][place.x + element.x] = 1;
+	for (Vector2i const & axe : axes)
+	{
+		bool complete = true;
+
+		_occupations[place.y + axe.y][place.x + axe.x] = 1;
+		for (int i = 1; i < LRGJEU - 1; i++)
+		{
+			if (_occupations[place.y + axe.y][i] == 0)
+			{
+				complete = false;
+				break;
+			}
+		}
+		if (complete)
+		{
+			diffScore(25);
+			for (bloc & piece : _blocsFixes)
+				piece.separe(_pos, place.y + axe.y, _id);
+			complete = false;
+		}
+	}
+}
+
+// Effectue un nettoyage d'une ligne.
+void amenagement::descente(const int & Y)
+{
+	for (bloc & element: _blocsFixes)
+	{
+		if (Y - 5 > element.getPlace().y)
+			element.deplace(0, 1);
+		else
+		{
+			;
+		}
+	}
 }
 
 // Alterne le bloc actif par le prochain et trouve aléatoirement le prochain différent bloc.
-void salle::prochain()
+void amenagement::prochain()
 {
 	setActif(_blocProchain);
 	int piece = alleatoire(NBPIECE, _blocProchain.getPiece());
@@ -534,81 +613,81 @@ void salle::prochain()
 	_blocProchain.setId(++_id);
 }
 
-/* Récupérations des attributs de la salle */
+/* Récupérations des attributs de l'aménagement */
 // Retourne le nom du joueur.
-string salle::getNomJoueur()
+string amenagement::getNomJoueur()
 {
 	return _nomJoueur;;
 }
 
-// Retourne la position de la salle dans la fenêtre.
-Vector2f salle::getPos()
+// Retourne la position de l'aménagement dans la fenêtre.
+Vector2f amenagement::getPos()
 {
 	return _pos;
 }
 
 // Retourne le numéro du niveau.
-int salle::getNoNiveau()
+int amenagement::getNoNiveau()
 {
 	return _noNiveau;
 }
 
 // Retourne le numéro du joueur.
-int salle::getNoJoueur()
+int amenagement::getNoJoueur()
 {
-	return _noJoueur;
+	return _joueur.noJoueur;
 }
 
 // Retourne le nombre de points du joueur.
-int salle::getPoints()
+int amenagement::getPoints()
 {
-	return _points;
+	return _joueur.score;
 }
 
 // Retourne si le bloc actif se figera.
-bool salle::getColle()
+bool amenagement::getColle()
 {
 	return _colle;
 }
 
 // Retourne le nombre de bombe du joueur.
-int salle::getNbBombe()
+int amenagement::getNbBombe()
 {
 	return _nbBombe;
 }
 
 // Retourne le style des blocs du niveau. (utile?)
-int salle::getStyleBloc()
+int amenagement::getStyleBloc()
 {
 	return _styleBlocs;
 }
 
-// Retourne l'orientation de la salle.
-int salle::getOrientation()
+// Retourne l'orientation de l'aménagement.
+int amenagement::getOrientation()
 {
 	return _orientation;
 }
 
 // Retourne le délai entre chaque descente du bloc du niveau.
-Time salle::getVitesse()
+Time amenagement::getVitesse()
 {
 	return _vitesseBloc;
 }
 
 // Retourne le bloc actif.
-bloc salle::getActif()
+bloc amenagement::getActif()
 {
 	return _blocActif;
 }
 
 // Retourne le bloc suivant.
-bloc salle::getProchain()
+bloc amenagement::getProchain()
 {
 	return _blocProchain;
 }
 
-// Retourne les occupations de la salle qui sont occupées.
-void salle::getOccupation(vector<Vector2i> & occupation)
+// Retourne les occupations de l'aménagement qui sont occupées.
+void amenagement::getOccupation(vector<Vector2i> & occupation)
 {
 	occupation.resize(0);
 	for (int i = 0; i < 20; i++)
@@ -617,8 +696,8 @@ void salle::getOccupation(vector<Vector2i> & occupation)
 				occupation.push_back(Vector2i(i, j));
 }
 
-// Retourne des occupations relatives de la salle .m.nm.
-void salle::getOccupationAbsolue(vector<Vector2i> occupation, vector<Vector2i> const & axes)
+// Retourne des occupations relatives de l'aménagement .m.nm.
+void amenagement::getOccupationAbsolue(vector<Vector2i> occupation, vector<Vector2i> const & axes)
 {
 	occupation.resize(0);
 	for (auto const & element : axes)
@@ -626,8 +705,8 @@ void salle::getOccupationAbsolue(vector<Vector2i> occupation, vector<Vector2i> c
 			occupation.push_back(element);
 }
 
-// Retourne les coordonnées relatives de la salle qui sont occupés.
-void salle::getOccupationRelative(vector<Vector2i> occupation, vector<Vector2i> const& axes, Vector2i place)
+// Retourne les coordonnées relatives de l'aménagement qui sont occupés.
+void amenagement::getOccupationRelative(vector<Vector2i> occupation, vector<Vector2i> const& axes, Vector2i place)
 {
 	occupation.resize(0);
 	for (auto const &element : axes)
@@ -635,8 +714,8 @@ void salle::getOccupationRelative(vector<Vector2i> occupation, vector<Vector2i> 
 			occupation.push_back(element);
 }
 
-// Vérifie si l'une des tuiles spécifiés de la salle est occupée.
-bool salle::checkOccupationAbsolue(vector<Vector2i> const& axes)
+// Vérifie si l'une des tuiles spécifiés de l'aménagement est occupée.
+bool amenagement::checkOccupationAbsolue(vector<Vector2i> const& axes)
 {
 	for (auto const &element : axes)
 		if (_occupations[element.y][element.x] == 1)
@@ -645,7 +724,7 @@ bool salle::checkOccupationAbsolue(vector<Vector2i> const& axes)
 }
 
 // Vérifie si l'une des tuiles du jeu est occupé dans un endroit relatif.
-bool salle::checkOccupationRelative(const vector<Vector2i> & axes, Vector2i place)
+bool amenagement::checkOccupationRelative(const vector<Vector2i> & axes, Vector2i place)
 {
 	for (Vector2i const &element : axes)
 		if (_occupations[place.y + element.y][place.x + element.x] == 1)
@@ -653,34 +732,34 @@ bool salle::checkOccupationRelative(const vector<Vector2i> & axes, Vector2i plac
 	return false;
 }
 
-/* Transformations de la salle */
-// Crée un obstacle infranchissable dans la salle. 
-void salle::creeObstacle()		//**
+/* Transformations de l'aménagement */
+// Crée un obstacle infranchissable dans l'aménagement. 
+void amenagement::creeObstacle()		//**
 {}
 
 // Remet le jeu à son état précédent le dernier bloc ajouté.
-void salle::marcheArriere()	//**
+void amenagement::marcheArriere()	//**
 {}
 
-// Fait pivoter toute la salle sur elle-même.
-void salle::tourne()			//**
+// Fait pivoter toute l'aménagement sur elle-même.
+void amenagement::tourne()			//**
 {}
 
 // Fait une animation de tremblement de terre + brise certains carrés qui sont suspendus.
-void salle::brasse()			//**
+void amenagement::brasse()			//**
 {}
 
 /* Contrôles principales */
 // Met le jeu en arrêt pour montrer les options ou le menu principal.
-void salle::pause()
+void amenagement::pause()
 {}
 
 // Accède au menu principal.
-void salle::menu()
+void amenagement::menu()
 {}
 
 // Vérifie si des lignes sont complétés pour vider ces lignes.
-void salle::balaye()
+void amenagement::balaye()
 {}
 
 /// // ??
@@ -688,16 +767,16 @@ void salle::balaye()
 //{}
 
 // Déplace tout les carrés en suspenssions d'un nombre requis vers le bas.
-void salle::compresse()
+void amenagement::compresse()
 {}
 
 // Ferme le jeu actif avant de retourner au menu principal.
-void salle::ferme()
+void amenagement::ferme()
 {}
 
 /* Déplacements et transformations du bloc actif */
-// Bouge le bloc d'une distance en x si elle n'entre pas en conflit avec la salle.
-bool salle::bougeActif(int X, int Y)
+// Bouge le bloc d'une distance en x si elle n'entre pas en conflit avec l'aménagement.
+bool amenagement::bougeActif(int X, int Y)
 {
 	int x = _blocActif.getPlace().x,
 		y = _blocActif.getPlace().y;
@@ -711,6 +790,9 @@ bool salle::bougeActif(int X, int Y)
 			return 0;
 	}
 
+	if (defautDeplacement(X))
+		return 0;
+
 	// Déplace le bloc
 	_blocActif.deplace(X, Y);
 
@@ -722,24 +804,8 @@ bool salle::bougeActif(int X, int Y)
 	return 1;
 }
 
-// Trouve l'angle suivant au sens antihoraire et effectue la maneuvre si possible.
-bool salle::pivoteActifGauche()
-{
-	int angle = _blocActif.getAngle();
-	if (++angle > 3)
-		angle = 0;
-
-	if (!colisionActifTourne(_blocActif.getAxes(angle)))
-	{
-		_blocActif.tourneGauche(angle);
-		return 1;
-	}
-
-	return 0;
-}
-
 // Trouve l'angle suivant au sens horaire et effectue la maneuvre si possible.
-bool salle::pivoteActifDroite()
+bool amenagement::pivoteActifDroite()
 {
 	int angle = _blocActif.getAngle();
 	if (--angle < 0)
@@ -748,15 +814,38 @@ bool salle::pivoteActifDroite()
 	// Vérifie si le bloc peut tourner sans être en conflit avec le reste
 	if (!colisionActifTourne(_blocActif.getAxes(angle)))
 	{
+		if (defautRotation(true, angle))
+			return 0;
 		// Fait pivoter la pièce
-		_blocActif.tourneDroite(angle);
+		_blocActif.setAngle(angle);
+		_blocActif.tourneDroite();
 		return 1;
 	}
 	return 0;
 }
 
+// Trouve l'angle suivant au sens antihoraire et effectue la maneuvre si possible.
+bool amenagement::pivoteActifGauche()
+{
+	int angle = _blocActif.getAngle();
+	if (++angle > 3)
+		angle = 0;
+
+	if (!colisionActifTourne(_blocActif.getAxes(angle)))
+	{
+		if (defautRotation(false, angle))
+			return 0;
+
+		_blocActif.setAngle(angle);
+		_blocActif.tourneGauche();
+		return 1;
+	}
+
+	return 0;
+}
+
 // Vérifie si le bloc colisionnerais sous un angle différent.
-bool salle::colisionActifTourne(const vector<Vector2i> & axes)
+bool amenagement::colisionActifTourne(const vector<Vector2i> & axes)
 {
 	int x = _blocActif.getPlace().x,
 		y = _blocActif.getPlace().y;
@@ -768,8 +857,8 @@ bool salle::colisionActifTourne(const vector<Vector2i> & axes)
 	return 0;
 }
 
-// Vérifie si le bloc peux tourner dans la salle.
-bool salle::pivoteActif(int angle)
+// Vérifie si le bloc peux tourner dans l'aménagement.
+bool amenagement::pivoteActif(int angle)
 {
 	int x = _blocActif.getPlace().x,
 		y = _blocActif.getPlace().y;
@@ -786,7 +875,7 @@ bool salle::pivoteActif(int angle)
 }
 
 // Fait dessendre le bloc jusqu'à ce qu'il colisione.
-void salle::tombeActif()
+void amenagement::tombeActif()
 {
 	int minY = HAUJEU;
 	vector<Vector2i> axes = _blocActif.getAxes(_blocActif.getAngle());
@@ -797,24 +886,26 @@ void salle::tombeActif()
 }
 
 // _En travaux_ Empèche de bouger, de tourner, etc pendant jusqu'à réactivation.
-void salle::arret(const bool & permis)
+void amenagement::arret(const bool & permis)
 {
 	_permis = permis;
 }
 
-// Aublige le bloc de rester en place, prenant place à l'occupation de la salle.
-void salle::colleActif()
+// Aublige le bloc de rester en place, prenant place à l'occupation de l'aménagement.
+void amenagement::colleActif()
 {
-	/// À cause de la redondance, mémoriser les axes dans la salle su lieu?
+	/// À cause de la redondance, mémoriser les axes dans l'aménagement su lieu?
 	setOccupationRelative(
-		_blocActif.getAxes(_blocActif.getAngle()), 
+		_blocActif.getAxes(_blocActif.getAngle()),
 		_blocActif.getPlace());
 	_blocsFixes.push_back(_blocActif);
+	diffScore(10 * _noNiveau);
+
 	prochain();
 }
 
-// Dessine les composantes de la salle.
-void salle::afficherInterface()
+// Dessine les composantes de l'aménagement.
+void amenagement::afficherInterface()
 {
 	_window.draw(_boite);
 	_window.draw(_statistiques);
@@ -832,8 +923,8 @@ void salle::afficherInterface()
 	_window.draw(_textAide);
 }
 
-// Affiche les blocs et les carrés de la salle.
-void salle::afficheBlocsSalle()
+// Affiche les blocs et les carrés de l'aménagement.
+void amenagement::afficheBlocsSalle()
 {
 	for (carre & element : _tuiles)
 		element.draw(_window);
@@ -842,88 +933,20 @@ void salle::afficheBlocsSalle()
 }
 
 
-/* Autres structures */
-///================= */
-
-
-// Crée des formes pour les manipuler des essais, des tests etc.
-struct teStruct
-{
-	int outline = 10;
-	CircleShape boule;
-	RectangleShape rectangle;
-	RectangleShape shape;
-
-	teStruct()
-	{
-		boule.setRadius(100.f);
-		boule.setFillColor(Color::Green);
-
-		rectangle.setSize(Vector2f(120, 50));
-
-		shape.setSize(Vector2f(100, 100));
-		shape.setFillColor(Color::Green);
-		// set a 10-pixel wide orange outline
-		shape.setOutlineThickness(10);
-		shape.setOutlineColor(Color(250, 150, 100));
-		// set the absolute position of the entity
-		shape.setPosition(60, 100);
-		// set the absolute scale of the entity
-		shape.setScale(4.0f, 1.6f);
-		// set the absolute rotation of the entity
-		shape.setRotation(45);
-	}
-};
-
-// Manipulation des formes à essais.
-void testPackPlay(teStruct &test, RenderWindow &window)
-{
-	window.draw(test.boule);
-	window.draw(test.shape);
-	window.draw(test.rectangle);
-
-	static bool retour = false;
-	int x = test.rectangle.getPosition().x;
-	if (retour)
-	{
-		x -= 200;
-		if (x < 10)
-			retour = false;
-	}
-	else
-	{
-		x += 200;
-		if (x > 800)
-			retour = true;
-	}
-	test.rectangle.setPosition(x, 100);
-
-	test.shape.setOutlineThickness(test.outline *= 3);
-	// move the entity relatively to its current position
-	test.shape.move(20, 5);
-	test.boule.move(20, 5);
-
-	// retrieve the absolute position of the entity
-	Vector2f position = test.shape.getPosition();
-	// = (15, 55)
-
-	// rotate the entity relatively to its current orientation
-	test.shape.rotate(10);
-
-	// retrieve the absolute rotation of the entity
-	float rotation = test.shape.getRotation();
-	// = 55
-
-	// scale the entity relatively to its current scale
-	test.shape.scale(0.8f, 0.4f);
-
-	// retrieve the absolute scale of the entity
-	Vector2f scale = test.shape.getScale();
-	// = (2, 0.8)
-}
-
 /* Fonctions */
 ///========= */
+
+// Initialise du texte pour les interfaces.
+Text initText(Font & police, string message, int mesure,
+	Color couleur, Vector2f & pos, Vector2f decalage)
+{
+	Text text(message, police, mesure);
+	text.setFillColor(couleur);
+	pos.x += decalage.x;
+	pos.y += decalage.y;
+	text.setPosition(pos);
+	return text;
+}
 
 // Construit les pièces par défaut à partir des coordonnées du tableau PIECES.
 bool initPieces(bloc * blocsJeu, const int & nbPiece, const vector<Vector2i> pieces[NBPIECE][4])
@@ -936,7 +959,7 @@ bool initPieces(bloc * blocsJeu, const int & nbPiece, const vector<Vector2i> pie
 	{
 		// Forme les carrés de la pièce (selon l'angle 1)
 		for (int c = 0; c < 4; c++)
-			formes.push_back(carre(POS, PLACE, pieces[f][0][c], PALETTES[2][f], 0));
+			formes.push_back(carre(POS, PLACE, pieces[f][0][c], PALETTES[0][f], 0));
 
 		// Ajoute les coordonnées des carrés de pièce aux axes
 		for (int a = 0; a < 4; a++)
@@ -945,6 +968,7 @@ bool initPieces(bloc * blocsJeu, const int & nbPiece, const vector<Vector2i> pie
 
 		// Initialise des blocs avec les vectors formés
 		*(blocsJeu + f) = bloc(PLACE, 0, 1, 0, f, 0, formes, axes);
+
 
 		// Vide la mémoire des vectors avant la prochaine pièce
 		formes.resize(0);
@@ -958,7 +982,8 @@ bool initPieces(bloc * blocsJeu, const int & nbPiece, const vector<Vector2i> pie
 bool modifieEncrageBlocs()
 {
 	// Change le point pivot du cube (3e forme) pour qu'il pivote sur son centre
-	tetris[2].setEncrage(Vector2f(2.5, 2.5));
+	//tetris[2].setEncrage(Vector2f(-.5, -.5));
+	//tetris[2].setPlace();
 	return false;
 }
 

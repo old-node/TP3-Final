@@ -20,6 +20,7 @@ using namespace sf;			// carre.h, mais selon moi ils n'ont pas raison d'être in
 /* Prototypes des fonctions */
 ///======================== */
 class bloc;
+void changeEncrage(bloc & piece, Vector2f const & origine);
 
 /* Objets à manipuler composé de carrés */
 ///==================================== */
@@ -27,15 +28,15 @@ class bloc
 {
 private:
 	int _morceau = -1;				// Pièce du lot des blocs accessible du jeu (de 0 à 6)
-	int _id = -2;					// No. associé à son utilisation 
-		// -2 pour fixe, -1 pour prochain, 0 pour actif et les autres sont incrémentés au jeu
+	int _id = 0;					// No. associé à son utilisation
+		// 0 pour actif, 1 pour prochain et les autres sont incrémentés au jeu
 	int _styleBloc = 0;				// Pour qu'on sache facillement quels attributs ont ses carrés 
 		// (Si nécessaire) couleur, dimenssions, etc.
 	int _etat = 0;					// Indice de l'état de l'utilisation d bloc
 		// (Si nécessaire) 1 pour normal (fixe), 2 pour indestructible, 3 pour fragile, 4 pour mobile
 
-	Vector2i _place = PLACE;		// Endroit situé dans la salle
-	Vector2f _encrage = PIVOTBLOC;	// Point pivot du bloc
+	Vector2i _place = PLACE;		// Endroit situé dans l'aménagement
+	Vector2f _encrage = BASE;		// Point pivot du bloc
 
 	int _angle = 0;					// Orientation actuelle de la forme (quatre angles)
 	vector<carre> _forme;			// Le profil en carrés du bloc
@@ -53,9 +54,9 @@ private:
 		setStyleBloc(copie._styleBloc);
 		setEtat(copie._etat);
 		setPlace(copie._place);
-		setEncrage(copie._encrage);
 		setAngle(copie._angle);
 		setFormes(copie._forme, copie._axes);
+		setEncrage(copie._encrage);
 	}
 
 public:
@@ -68,6 +69,7 @@ public:
 	bloc(const bloc & change)
 	{
 		copie(change);
+		//change.setEncrage(change.getEncrage());
 	}
 	const bloc & operator=(const bloc & change)
 	{
@@ -115,31 +117,63 @@ public:
 
 	/// Transforme les attributs du bloc
 	//void detruit();
-	//void separe();
+	vector<bloc> separe(const Vector2f & pos, const int & Y, int & id)
+		// Enlève les carrés à l'axe y et forme des petits blocs avec la partie supérieure.
+	{
+		bloc supperieur(_place, id, _styleBloc, _etat, _morceau, _angle, _forme, _axes);
+		supperieur.setEtat(7);
+		supperieur.getProfil().resize(0);
+		for (int i = 0; i < 4; i++)
+			supperieur.getAxes(i).resize(0);
+		const bloc graine = supperieur;
+
+		vector<bloc> miettes;
+
+		int size = _forme.size();
+
+		for (int i = 0; i < size; i++)
+		{
+			supperieur = graine;
+			
+			Vector2i axe[4] = { _axes[0].at(i), _axes[1].at(i), _axes[2].at(i), _axes[3].at(i) };
+			int y = axe[_angle].y + _place.y;
+			if (y < Y)
+			{
+				supperieur.setId(++id);
+				supperieur.ajouteCarre(_forme.at(i), pos, axe);
+				supperieur.deplace(0, 1);
+				miettes.push_back(supperieur);
+				_forme.at(i).~carre();
+			}
+			else if (y == Y)
+				_forme.at(i).~carre();
+		}
+		_forme.shrink_to_fit();
+
+		return miettes;
+	}
 	//void fusionne();
 	//void efface();
 
 	// Retourne les attributs du bloc
-	Vector2i getPlace();
-	Vector2f getEncrage();
-	int getId();
-	int getStyleBloc();
-	int getPiece();
-	int getEtat();
-	int getAngle();
+	const Vector2i getPlace();
+	const Vector2f getEncrage() const;
+	const int getId();
+	const int getStyleBloc();
+	const int getPiece();
+	const int getEtat();
+	const int getAngle();
 	vector<Vector2i> getAxes(const int & angle);
 	vector<carre> getProfil();
 
 	// Rotate
-	void tourneGauche(const int & angle)
+	void tourneGauche()
 	{
-		setAngle(angle);
 		for (auto & element : _forme)
 			element.rotate(-90);
 	}
-	void tourneDroite(const int & angle)
+	void tourneDroite()
 	{
-		setAngle(angle);
 		for (auto & element : _forme)
 			element.rotate(90);
 	}
@@ -213,14 +247,10 @@ void bloc::setPlace(const Vector2i & place)
 void bloc::setEncrage(const Vector2f & encrage)
 {
 	_encrage = encrage;
-	int size = _forme.size();
 
 	// Pour chaque carré dans le bloc
-	for (int i = 0; i < size; i++)
-	{
-		/// PIECES[noPiece][1]
-		_forme.at(i).setEncrage(encrage);
-	}
+	for (int i = 0; i < _forme.size(); i++)
+		_forme.at(i).setEncrage(_encrage);
 }
 
 // Change l'ID du bloc.
@@ -276,7 +306,7 @@ void bloc::setFormes(const vector<carre> & tours, const vector<Vector2i> axes[4]
 	}
 }
 
-// Modifie l'emplacement du bloc dans la salle.
+// Modifie l'emplacement du bloc dans l'aménagement.
 void bloc::deplace(const int & x, const int & y)
 {
 	setPlace(Vector2i(_place.x + x, _place.y + y));
@@ -285,14 +315,14 @@ void bloc::deplace(const int & x, const int & y)
 }
 
 /// _En construction_, Trouve automatiquement les axes d'un carré pour chaque angle.
-bool trouveAxesRotation(Vector2i axes[4], const Vector2i & a, const int & angle)
+bool trouveAxesRotation(Vector2i axes[4], Vector2i & a, const int & angle)
 {
 	assert(angle >= 0 && angle <= 3);
 
 	int gabarit[5][5] = { {1,2,3,4,1}, {4,5,6,5,2}, {3,6,0,6,3}, {2,5,6,5,4}, {1,4,3,2,1} };
 	Vector2i autres;
 
-	if (a == Vector2i(2, 2))
+	if (/*a == Vector2i(2, 2)*/1)
 		return 0;
 	else if (gabarit[a.y][a.x] == 1)
 		;//axes = { {0,0},{},{},{} };
@@ -306,9 +336,9 @@ bool trouveAxesRotation(Vector2i axes[4], const Vector2i & a, const int & angle)
 }
 
 // Ajoute un cube dans la liste.
-void bloc::ajouteCarre(carre rect, const Vector2f & coin, const Vector2i axe[4])
+void bloc::ajouteCarre(carre rect, const Vector2f & pos, const Vector2i axe[4])
 {
-	rect.setPos(coin, _place, axe[0]);
+	rect.setPos(pos, _place, axe[0]);
 	_forme.push_back(rect);
 	for (int i = 0; i < 4; i++)
 		_axes[i].push_back(axe[i]);
@@ -335,44 +365,44 @@ void bloc::enleveCube(const int & angle)
 	//_formes[angle].pop_back();
 }
 
-// Retourne l'endroit du bloc dans la salle.
-Vector2i bloc::getPlace()
+// Retourne l'endroit du bloc dans l'aménagement.
+const Vector2i bloc::getPlace()
 {
 	return _place;
 }
 
 // Retourne l'encrage du bloc.
-Vector2f bloc::getEncrage()
+const Vector2f bloc::getEncrage() const
 {
 	return _encrage;
 }
 
 // Retourne l'ID du bloc.
-int bloc::getId()
+const int bloc::getId()
 {
 	return _id;
 }
 
 // Retourne le style du bloc.
-int bloc::getStyleBloc()
+const int bloc::getStyleBloc()
 {
 	return _styleBloc;
 }
 
 // Retourne le numéro de la pièce du bloc.
-int bloc::getPiece()
+const int bloc::getPiece()
 {
 	return _morceau;
 }
 
 // Retourne le numéro de l'état du bloc.
-int bloc::getEtat()
+const int bloc::getEtat()
 {
 	return _etat;
 }
 
 // Retourne l'orrientation du bloc.
-int bloc::getAngle()
+const int bloc::getAngle()
 {
 	return _angle;
 }
@@ -427,14 +457,19 @@ void bloc::montre(RenderWindow & window, const Vector2f & coin)
 /* Fonctions aux blocs */
 ///=================== */
 
-
+// Modifie l'encrage des carrés d'un bloc.
+void changeEncrage(bloc & piece, Vector2f const & encrage)
+{
+	for (carre & element : piece.getProfil())
+		element.setEncrage(encrage);
+}
 
 /* Constantes pour les blocs */
-///======================== */
+///========================= */
+
+bloc tetris[NBPIECE];		// Liste des sept blocs à instancier à partir de PIECES
 /* Les coordonnées de chaque carrés de chaque angles des NBPIECE pièces par défaut du jeu */
-const int NBPIECE = 7;		// Nombre de pièces accessibles au jeu
-bloc tetris[NBPIECE];		// Liste de sept blocs à instancier à partir de PIECES
-const vector<Vector2i> PIECES[NBPIECE][4] =
+const vector<Vector2i> PIECES[7][4] =
 {		// NBPIECE formes, 4 angles, 4 carrés, pour chaque coordonnées {{{{Vector2i}*4}*4}*NBPIECE}
 	{	// Les angles sont: droite (0), debout (1), gauche (2), renverse (3)
 		{ Vector2i{ 1,2 }, Vector2i{ 2,2 }, Vector2i{ 3,2 }, Vector2i{ 3,1 } },
@@ -478,3 +513,8 @@ const vector<Vector2i> PIECES[NBPIECE][4] =
 		{ Vector2i{ 1,2 }, Vector2i{ 2,2 }, Vector2i{ 2,3 }, Vector2i{ 3,3 } },
 		{ Vector2i{ 2,2 }, Vector2i{ 2,3 }, Vector2i{ 3,2 }, Vector2i{ 3,1 } }
 	} };// Plié		(Z)
+
+
+
+
+//const bloc* o{ new bloc() };
