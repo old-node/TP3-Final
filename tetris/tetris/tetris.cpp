@@ -8,7 +8,7 @@
 
 /* Directives au pré-processeur */
 ///============================ */
-#include <saisieSecurisee.h>	
+#include <saisieSecurisee.h>	//Pour la fonction ouvrirFichier
 #include <iomanip>				
 #include <locale>				
 #include <string>				
@@ -34,16 +34,15 @@ void afficherMenu(RenderWindow & window, Text titre[6],
 	Music & music, Music & music2, Music & music3,
 	Texture & texture, Font & font, identite & identite);
 
+string saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identite & identite);
+int questionOuiNonSFML(RenderWindow & window2, identite & identite);
 void initTitre(Text titre[6], Font & font, float posx, float posy, float size);
 void afficheTitre(RenderWindow & window, Text titre[6]);
-
 int listeEnregistrement(RenderWindow & windowMenu, identite & identite);
-string saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identite & joueur);
-int questionOuiNonSFML(RenderWindow & window2, identite & identite);
 int questionEnregistrement(RenderWindow & window2, Font font, identite & identite);
-void afficherScore(RenderWindow & windowMenu);
 void trierInsertion(char nomJoueur[][20], int scoreMax[], int taille);
-void enregistrerScore(RenderWindow & window, identite & identite);
+void enregistrerScore(identite & identite);
+void afficherScore(RenderWindow & windowMenu);
 void afficherInfo(RenderWindow &window, identite & joueur, Font font,Text text );
 
 /* Constantes pour le programme principal */
@@ -62,22 +61,16 @@ struct boutonClick
 	Texture fondImage;
 	Text text;
 	Font font;
-
-
-	/*RectangleShape btnMusique(Vector2f(300,300));*/
 };
 
 /* Programme principal */
 ///=================== */
 int main()
 {
+
 	identite joueur;
-	
-	RectangleShape f(Vector2f(100, 100));
-	f.setFillColor(Color(120, 210, 100, 130));
 
-
-	setlocale(LC_CTYPE, "fra");
+	setlocale(LC_CTYPE, "fra"); //met la langue en francais
 	srand(time(NULL));		// Trouve une source aléatoire
 
 	RenderWindow window;
@@ -85,19 +78,23 @@ int main()
 
 	string nomJoueur;
 
+	Font fontTitre;
+	if (!fontTitre.loadFromFile("styles/hemi_head_bd_it.ttf"));		//Si la police n'est pas trouvable, une erreur est afficher dans la console
+	Font font;
+	if (!font.loadFromFile("styles/font_arial.ttf"));
+
 	Music music;
 	Music music2;
 	Music music3;
-	music.stop();
-	music.openFromFile("styles/music3.ogg");
 
 	vector<Vector2i> occupations;
+
 	salle espace(window, "styles/font_arial.ttf", POS, 1, 1, occupations, nomJoueur, 1, 0, 0, milliseconds(800), tetris, 7);
 
 	Texture texture;
-	if (!texture.loadFromFile("images/back_main.jpg"));
+	if (!texture.loadFromFile("images/back_main.jpg"));		//Si la texture n'est pas trouvable, une erreur est afficher dans la console
+
 	Sprite background(texture);
-	window.draw(background);
 
 	Event event;
 	Time moment;
@@ -110,33 +107,20 @@ int main()
 		score = 0;
 	int identiteEnregistrer, reponse = 1;
 
-	Font font;
-	if (!font.loadFromFile("styles/hemi_head_bd_it.ttf"))
-		cout << "Erreur à afficher pour chaque font, quitter le programme en plus?";
 
 	Text titre[6];
-	initTitre(titre, font, 110, 10, 60);
 	Text text;
-	Text textAngle;
-	if (!font.loadFromFile("styles/font_arial.ttf"));// Choix de la police à utiliser
-	textAngle.setFont(font);
-	textAngle.setCharacterSize(LRGPOLICE);	// Taille des caractères exprimée en pixels, pas en points !						 
-	textAngle.setColor(Color::Black);		// Couleur du texte
-	textAngle.setPosition(Vector2f(60, DIMSALLE.y + 150));		// Position du texte
-	Text textPos = textAngle;
-	textPos.setPosition(Vector2f(120, DIMSALLE.y + 150));
-
-
 										// Fenêtre d'enregistrements
-	window2.create(VideoMode(500, 500), "TETRIS v1.2 Nom du identite");
+	window2.create(VideoMode(500, 500), "TETRIS v1.2 Nom du joueur");
+
 	do
 	{
 		saisirNomJoueur(window2, font, texture, joueur);
 		espace.setNomJoueur(joueur.nomJoueur);
 
-		identiteEnregistrer = listeEnregistrement(window2, espace.getJoueur());
-		if (identiteEnregistrer == 1)
-			reponse = questionEnregistrement(window2, font, espace.getJoueur());
+		identiteEnregistrer = listeEnregistrement(window2, espace.getJoueur());	
+		if (identiteEnregistrer == 1)													//Si le joueur n'est pas dans la base de donnée, les statistiques retourne a 0
+			reponse = questionEnregistrement(window2, font, joueur);
 		else
 		{
 			reponse = 1;
@@ -147,19 +131,21 @@ int main()
 
 	window2.close();
 
+	// Fenetre principal
+	window.create(VideoMode(POSAFFICHE.x + 300 + LRGPOLICE, DIMSALLE.y + 200), "TETRIS Jeu"); 
 
-	window.create(VideoMode(POSAFFICHE.x + 300 + LRGPOLICE, DIMSALLE.y + 200), "TETRIS Jeu");
 	Image icon;
 	icon.loadFromFile("images/icon.png");
 	window.setIcon(128, 128, icon.getPixelsPtr()); //Affiche l'icone de Tétris
+	initTitre(titre, fontTitre, 110, 10, 60);
 
 	afficherMenu(window, titre, music, music2, music3, texture, font, joueur);
 	espace.setNomJoueur(joueur.nomJoueur);
-	/// Ajouter une condition tant que la fenêtre est active, ne ferme pas le programme
-	///			sinon la console reste ouverte quand on ferme avec le X de la fenêtre
+	
 
 	// Fenêtre du jeu principal
-	for (size_t j = 0; j < 5;j++)
+
+	for (size_t j = 0; j < 5;j++)			//Positionne le titre
 	{
 		titre[j].setPosition(Vector2f(100 + (j* titre[j].getCharacterSize()), 10));
 	}
@@ -172,16 +158,15 @@ int main()
 
 		do {
 			Sprite background(texture);
-			window.draw(background);
-
+			window.draw(background);	
 		
-			initTitre(titre, font, 110, 10, 60);
+			
 			afficheTitre(window, titre);
 
 			if (tempsEcoule.getElapsedTime() > espace.getVitesse())
 			{
 				tempsEcoule.restart();
-				moment.asMilliseconds();	/// Utile ? Clock peut faire la job je crois
+				moment.asMilliseconds();
 				mouvement = 0;
 			}
 			else
@@ -199,28 +184,30 @@ int main()
 			case 3:	// Haut ou X	(Tourner vers la droite)
 				espace.pivoteActifDroite();
 				/// espace.bouge(0, -1);
-				f.move(Vector2f(0, -20));					/////
+					
 				break;
 			case 0: // Descente du bloc automatique
 				espace.setColle(!espace.bougeActif(0, 1));
 				break;
 			case 5:	// Bas			(Faire tomber)
 				espace.tombeActif();
-				f.move(Vector2f(0, 20));					/////
+			
 				break;
 			case 4:	// Gauche		(Bouger)
 				espace.bougeActif(-1, 0);
-				f.move(Vector2f(-20, 0));					/////
+			
 				break;
 			case 6:	// Droite		(Bouger)
 				espace.bougeActif(1, 0);
-				f.move(Vector2f(20, 0));					/////
+			
 				break;
-			case 7:	// P
+			case 7:	// P (Menu option)
 				menuOption(window, titre, music, music2, music3, joueur);
 				espace.setNomJoueur(joueur.nomJoueur);
 				break;
-			case 1:	// Esc		
+			case 1:	// Esc (retour au menu)	
+
+				enregistrerScore(joueur);
 				afficherMenu(window, titre, music, music2, music3, texture, font, joueur);
 				espace.setNomJoueur(joueur.nomJoueur);
 				break;
@@ -235,37 +222,30 @@ int main()
 				// Démare ensuite le prochain bloc tout en trouvant le bloc suivant
 				
 				espace.colleActif();
-				joueur.score += 25;
+				joueur.score += 25;		//ajoute des point au joueur.
 				espace.setColle(false);
 			}
 
 			
 			window.draw(background);
-	
+
 			espace.afficherInterface();
 			espace.afficheBlocsSalle();
 			afficheTitre(window, titre);
 			afficherInfo(window, espace.getJoueur(), font, text);
 
-			espace.drawActif();
-
-			textPos.setString(to_string(espace.getActif().getAngle())); 	// Chaîne de caractères à afficher
-			window.draw(textPos);
-			string place = to_string(espace.getActif().getPlace().x)
-				+ "," + to_string(espace.getActif().getPlace().y);
-			textAngle.setString(place); 	// Chaîne de caractères à afficher
-			window.draw(textAngle);
+			espace.drawActif(); //dessine la piece active	
 
 			window.display();
 			
 		} while (ok);
 
 	} while (ok);
-	enregistrerScore(window2, espace.getJoueur());
+	enregistrerScore(espace.getJoueur());
 	return 0;
 }
 
-
+//Affiche les informations du joueur (nom, lvl, score) dans l'interface de jeu
 void afficherInfo(RenderWindow &window,identite & joueur, Font font, Text text)
 {
 	
@@ -308,7 +288,6 @@ void trierInsertion(char nomJoueur[][20], int scoreMax[], int taille)
 		strcpy_s(nomJoueur[j], 20, nomJoueurTemp);
 	}
 }
-
 // Retourne une valeur correspondant au choix saisi entre 'o' et 'n'
 int questionOuiNonSFML(RenderWindow & window2, identite &joueur)
 {
@@ -342,41 +321,48 @@ int questionOuiNonSFML(RenderWindow & window2, identite &joueur)
 	}
 }
 
-// 
-void enregistrerScore(RenderWindow & window, identite &joueur) {
+//Demande au joueur s'il veux enregistrrer son score et attend une reponse de QuestionOuiNon 
+void enregistrerScore(identite &joueur) {
 
-	window.clear();
+
+	RenderWindow window3(VideoMode(633, 460), "TETRIS v1.2 Enregistrement");
+	Texture texture3;
+	Font font;
+	if (!font.loadFromFile("styles/font_arial.ttf"));
+	Text text;
+	if (!texture3.loadFromFile("images/tetris_end.jpg"));	//va chercher le fond d'écran
+	Sprite background(texture3);
+	
+	
 
 	int reponse = 0;
 	int longueurNom = 1;
-	Text text;
-
+	
 	text.setColor(Color::Green);
 	text.setFillColor(Color::Green);
-	Font font;
-	if (!font.loadFromFile("styles/font_arial.ttf"));
 	text.setFont(font);
 	text.setPosition(100, 50);
 	text.setCharacterSize(22);
+	window3.draw(background);
 
 	do {
 
 		if (joueur.nouveauJoueur == false) {
-			window.display();
-			text.setString("Voulez vous enregistrer par-dessus votre ancienne sauvegarde? (o / n)? : ");
-			window.draw(text);
-			window.display();
+			
+			text.setString("Voulez vous enregistrer par-dessus \n votre ancienne sauvegarde? \n (o / n)? : ");
+			window3.draw(text);
+			window3.display();
 
 		}
 		else {
-			window.display();
-			text.setString("Voulez vous enregistrer votre score? (o / n)? : ");
-			window.draw(text);
-			window.display();
+		
+			text.setString("Voulez vous enregistrer votre score? \n (o / n)? : ");
+			window3.draw(text);
+			window3.display();
 
 
 		}
-		reponse = questionOuiNonSFML(window, joueur);
+		reponse = questionOuiNonSFML(window3, joueur);
 	} while (reponse != 1 && reponse != 2);
 
 	if (reponse == 1) {						//Enregistre tout les score dans un tableau
@@ -431,7 +417,7 @@ void enregistrerScore(RenderWindow & window, identite &joueur) {
 	}
 }
 
-// 
+// Affiche le nom, le level et le score des 10 meilleurs joueurs dans un fichier score
 void afficherScore(RenderWindow &windowMenu)
 {
 
@@ -517,7 +503,7 @@ void afficherScore(RenderWindow &windowMenu)
 	}
 }
 
-// 
+// Demande au joueur s'il veut reprendre le profil d'un joueur enregistrer dans le fichier score
 int questionEnregistrement(RenderWindow & window2, Font font, identite & identite)
 {
 	window2.clear();
@@ -566,7 +552,7 @@ int questionEnregistrement(RenderWindow & window2, Font font, identite & identit
 	return 1;
 }
 
-// 
+// Verifie si le nom saisie est déja dans le fichier score
 int listeEnregistrement(RenderWindow & window2, identite & identite)
 {
 	ifstream labyrinthe;
@@ -622,7 +608,7 @@ int listeEnregistrement(RenderWindow & window2, identite & identite)
 
 }
 
-// 
+// Demande au joueur de saisir un nom et attend qu'il appuie sur la touche enter
 string saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identite & joueur)
 {
 	Image icon;
@@ -698,12 +684,13 @@ string saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identi
 				}
 				else if (
 					((event.key.code >= 97 && event.key.code <= 122)
-					|| event.key.code == 32
+					|| event.key.code == 32 || (event.key.code == Keyboard::RShift || event.key.code == Keyboard::LShift)
 					|| (event.key.code >= 48 && event.key.code <= 57))
 					&& (s.size() <= 10))	// caractere ASCII (A - Z, 0 - 9 )
 				{
 					s.push_back((char)event.text.unicode); // ajoute un char a la string
 				}
+
 				if (s.size() != 0)
 				{
 					
@@ -1283,7 +1270,6 @@ void afficherMenu(RenderWindow & window, Text titre[6],
 		{
 			windowMenu.draw(background);
 
-			//afficheTitre(windowMenu, titre);
 			
 			text.setFont(font);
 			text.setColor(Color::Black);	// choix de la couleur du texte
@@ -1362,8 +1348,3 @@ void afficherMenu(RenderWindow & window, Text titre[6],
 }
 
 
-/// Réparer l'allocation de la classe des blocs avec new, *, &, etc ? 
-/// j'ai de la difficulté à rendre ça fonctionnel
-/// ???
-/// Profit
-/// 
