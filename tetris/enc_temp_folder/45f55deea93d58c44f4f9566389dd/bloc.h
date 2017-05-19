@@ -125,7 +125,7 @@ public:
 		supperieur.getProfil().resize(0);
 		for (int i = 0; i < 4; i++)
 			supperieur.getAxes(i).resize(0);
-		const bloc grain = supperieur;
+		const bloc graine = supperieur;
 
 		vector<bloc> miettes;
 
@@ -133,7 +133,7 @@ public:
 
 		for (int i = 0; i < size; i++)
 		{
-			supperieur = grain;
+			supperieur = graine;
 			
 			Vector2i axe[4] = { _axes[0].at(i), _axes[1].at(i), _axes[2].at(i), _axes[3].at(i) };
 			int y = axe[_angle].y + _place.y;

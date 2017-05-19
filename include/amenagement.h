@@ -3,7 +3,7 @@
 /* Fichier:			pieces.h
 // Auteur:			Olivier Lemay Dostie & Jean-Allain Sainton
 // Date création:	27/04/2017
-// Description:		header pour le TP3 de C++ pour la création d'objets "salles" permettant
+// Description:		header pour le TP3 de C++ pour la création d'objets "aménagement" permettant
 .					l'utilisateur de joueur à une version personnalisé de Tetris. */
 
 /* Directives au pré-processeur */
@@ -579,7 +579,7 @@ void amenagement::setOccupationRelative(vector<Vector2i> const & axes, Vector2i 
 		}
 		if (complete)
 		{
-			diffScore(25);
+			diffScore(100 * _noNiveau);
 			for (bloc & piece : _blocsFixes)
 				piece.separe(_pos, place.y + axe.y, _id);
 			complete = false;
