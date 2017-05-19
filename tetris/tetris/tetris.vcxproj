@@ -103,6 +103,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\Utilisateur\Documents\GitHub\TP3-Final\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,9 +145,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="tetris.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -154,6 +152,9 @@
     <ClInclude Include="..\..\include\carre.h" />
     <ClInclude Include="..\..\include\saisieSecurisee.h" />
     <ClInclude Include="..\..\include\salle.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
@@ -168,7 +169,7 @@
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+      <ErrorText>Ce projet fait référence à des packages NuGet qui sont manquants sur cet ordinateur. Utilisez l'option de restauration des packages NuGet pour les télécharger. Pour plus d'informations, consultez http://go.microsoft.com/fwlink/?LinkID=322105. Le fichier manquant est : {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\sfml-system.redist.2.4.0.0\build\native\sfml-system.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\sfml-system.redist.2.4.0.0\build\native\sfml-system.redist.targets'))" />
     <Error Condition="!Exists('..\packages\sfml-system.2.4.0.0\build\native\sfml-system.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\sfml-system.2.4.0.0\build\native\sfml-system.targets'))" />
