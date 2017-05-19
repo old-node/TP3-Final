@@ -130,6 +130,7 @@ public:
 	vector<Vector2i> getAxes(const int & angle);
 	vector<carre> getProfil();
 
+	
 	// Rotate
 	void tourneGauche(const int & angle)
 	{
