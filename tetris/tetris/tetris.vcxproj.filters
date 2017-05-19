@@ -26,10 +26,19 @@
     <ClInclude Include="..\..\include\carre.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\saisieSecurisee.h">
+    <ClInclude Include="..\..\include\contact.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\salle.h">
+    <ClInclude Include="..\..\include\contenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\contexte.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\saisieSFML.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\amenagement.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

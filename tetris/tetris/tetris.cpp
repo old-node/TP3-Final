@@ -8,7 +8,6 @@
 
 /* Directives au pré-processeur */
 ///============================ */
-#include <saisieSecurisee.h>	//Pour la fonction ouvrirFichier
 #include <iomanip>				
 #include <locale>				
 #include <string>				
@@ -18,7 +17,9 @@
 using namespace std;
 #include <SFML/Graphics.hpp>	
 #include <SFML/Audio.hpp>		
-#include <salle.h>				// Contient bloc.h qui contient carre.h
+#include <saisieSFML.h>			
+#include <contact.h>			// Contient contenu.h qui contient contexte.h
+#include <amenagement.h>		// Contient bloc.h qui contient carre.h
 using namespace sf;
 
 
@@ -34,67 +35,71 @@ void afficherMenu(RenderWindow & window, Text titre[6],
 	Music & music, Music & music2, Music & music3,
 	Texture & texture, Font & font, identite & identite);
 
-string saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identite & identite);
-int questionOuiNonSFML(RenderWindow & window2, identite & identite);
 void initTitre(Text titre[6], Font & font, float posx, float posy, float size);
 void afficheTitre(RenderWindow & window, Text titre[6]);
+
 int listeEnregistrement(RenderWindow & windowMenu, identite & identite);
+void saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identite & joueur);
+int questionOuiNonSFML(RenderWindow & window2, identite & identite);
 int questionEnregistrement(RenderWindow & window2, Font font, identite & identite);
-void trierInsertion(char nomJoueur[][20], int scoreMax[], int taille);
-void enregistrerScore(identite & identite);
 void afficherScore(RenderWindow & windowMenu);
-void afficherInfo(RenderWindow &window, identite & joueur, Font font,Text text );
+void trierInsertion(char nomJoueur[][20], int scoreMax[], int taille);
+void enregistrerScore(RenderWindow & window, identite & identite);
 
-/* Constantes pour le programme principal */
-///====================================== */
-const double PI = atan(1) * 4;	// Valeur de pi (nécessaire?)
-
-struct boutonClick
-{
-	int posXRect = 350,
-		posYRect = 50,
-		hauteur = 50,
-		largeur = 300,
-		posXTexte = 375,
-		posYTexte = 75;
-	RectangleShape rectangle;
-	Texture fondImage;
-	Text text;
-	Font font;
-};
 
 /* Programme principal */
 ///=================== */
 int main()
 {
+	/// Tests
+	//teStruct test;
+	RectangleShape f(Vector2f(100, 100));
+	f.setFillColor(Color(120, 210, 100, 130));
 
-	identite joueur;
+	/// Essais de blocs
+	//bloc active = espace.getBloc();
+	//int angle = active.getAngle();
 
-	setlocale(LC_CTYPE, "fra"); //met la langue en francais
+	setlocale(LC_CTYPE, "fra");
 	srand(time(NULL));		// Trouve une source aléatoire
 
 	RenderWindow window;
 	RenderWindow window2;
 
-	string nomJoueur;
-
-	Font fontTitre;
-	if (!fontTitre.loadFromFile("styles/hemi_head_bd_it.ttf"));		//Si la police n'est pas trouvable, une erreur est afficher dans la console
 	Font font;
-	if (!font.loadFromFile("styles/font_arial.ttf"));
 
-	Music music;
+	if (!font.loadFromFile("styles/hemi_head_bd_it.ttf"))
+		cout << "Erreur à afficher pour chaque font, quitter le programme en plus?";
+	Text titre[6];
+	initTitre(titre, font, 110, 10, 60);
+
+	font.loadFromFile("styles/font_arial.ttf");	// Choix de la police à utiliser
+	Text textAngle;
+	textAngle.setFont(font);
+	textAngle.setCharacterSize(LRGPOLICE);		// Taille des caractères exprimée en pixels, pas en points !						 
+	textAngle.setColor(Color::Black);			// Couleur du texte
+	textAngle.setPosition(Vector2f(60, DIMSALLE.y + 150));		// Position du texte
+	Text textPos = textAngle;
+	textPos.setPosition(Vector2f(120, DIMSALLE.y + 150));
+
+	//RenderWindow windowTest(VideoMode(500, 500), "TETRIS v1.2 Nom du identite");
+
+	//windowTest.display();
+
+	string nomJoueur;
 	Music music2;
 	Music music3;
-
 	vector<Vector2i> occupations;
+	amenagement espace(window, "styles/font_arial.ttf", POS, 1, 1, occupations, nomJoueur, 1, 0, 0, milliseconds(800), tetris, 7);
 
-	salle espace(window, "styles/font_arial.ttf", POS, 1, 1, occupations, nomJoueur, 1, 0, 0, milliseconds(800), tetris, 7);
+	Music music;
+	music.stop();
+	music.openFromFile("styles/music3.ogg");
 
 	Texture texture;
-	if (!texture.loadFromFile("images/back_main.jpg"));		//Si la texture n'est pas trouvable, une erreur est afficher dans la console
-
+	if (!texture.loadFromFile("images/back_main.jpg"));
 	Sprite background(texture);
+	window.draw(background);
 
 	Event event;
 	Time moment;
@@ -102,25 +107,23 @@ int main()
 	Clock tempsEcoule;
 
 	int mouvement = -1;
+
 	int i = 0;
 	int lvl = 1,
 		score = 0;
 	int identiteEnregistrer, reponse = 1;
 
+	font.loadFromFile("styles/font_arial.ttf");	// Choix de la police à utiliser
 
-	Text titre[6];
-	Text text;
-										// Fenêtre d'enregistrements
-	window2.create(VideoMode(500, 500), "TETRIS v1.2 Nom du joueur");
 
+	// Saisie du nom du joueur.
+	window2.create(VideoMode(500, 500), "Nom du joueur de TETRIS");
 	do
 	{
-		saisirNomJoueur(window2, font, texture, joueur);
-		espace.setNomJoueur(joueur.nomJoueur);
-
-		identiteEnregistrer = listeEnregistrement(window2, espace.getJoueur());	
-		if (identiteEnregistrer == 1)													//Si le joueur n'est pas dans la base de donnée, les statistiques retourne a 0
-			reponse = questionEnregistrement(window2, font, joueur);
+		saisirNomJoueur(window2, font, texture, espace.getJoueur());
+		identiteEnregistrer = listeEnregistrement(window2, espace.getJoueur());
+		if (identiteEnregistrer == 1)
+			reponse = questionEnregistrement(window2, font, espace.getJoueur());
 		else
 		{
 			reponse = 1;
@@ -131,43 +134,38 @@ int main()
 
 	window2.close();
 
-	// Fenetre principal
-	window.create(VideoMode(POSAFFICHE.x + 300 + LRGPOLICE, DIMSALLE.y + 200), "TETRIS Jeu"); 
-
+	window.create(VideoMode(POSAFFICHE.x + 300 + LRGPOLICE, DIMSALLE.y + 200), "TETRIS");
 	Image icon;
 	icon.loadFromFile("images/icon.png");
 	window.setIcon(128, 128, icon.getPixelsPtr()); //Affiche l'icone de Tétris
-	initTitre(titre, fontTitre, 110, 10, 60);
 
-	afficherMenu(window, titre, music, music2, music3, texture, font, joueur);
-	espace.setNomJoueur(joueur.nomJoueur);
+	afficherMenu(window, titre, music, music2, music3, texture, font, espace.getJoueur());
 	
+	if (music.getStatus() == false)
+		music.play();
+	
+	window.draw(background);
+
+	window.display();
+
+	/// Ajouter une condition tant que la fenêtre est active, ne ferme pas le programme
+	///			sinon la console reste ouverte quand on ferme avec le X de la fenêtre
 
 	// Fenêtre du jeu principal
-
-	for (size_t j = 0; j < 5;j++)			//Positionne le titre
-	{
-		titre[j].setPosition(Vector2f(100 + (j* titre[j].getCharacterSize()), 10));
-	}
-	titre[5].setPosition(Vector2f(100 + (5* titre[5].getCharacterSize())- 25, 10));
-
 	do
 	{
 		int posy, posx;
 		int nbY = 0;
 
 		do {
-			Sprite background(texture);
-			window.draw(background);	
-		
 			
-			afficheTitre(window, titre);
+			window.draw(background);
 
 			if (tempsEcoule.getElapsedTime() > espace.getVitesse())
 			{
 				tempsEcoule.restart();
-				moment.asMilliseconds();
-				mouvement = 0;
+				moment.asMilliseconds();	/// Utile ? Clock peut faire la job je crois
+				//mouvement = 0;
 			}
 			else
 			{
@@ -184,32 +182,28 @@ int main()
 			case 3:	// Haut ou X	(Tourner vers la droite)
 				espace.pivoteActifDroite();
 				/// espace.bouge(0, -1);
-					
+				f.move(Vector2f(0, -20));					/////
 				break;
 			case 0: // Descente du bloc automatique
 				espace.setColle(!espace.bougeActif(0, 1));
 				break;
 			case 5:	// Bas			(Faire tomber)
 				espace.tombeActif();
-			
+				f.move(Vector2f(0, 20));					/////
 				break;
 			case 4:	// Gauche		(Bouger)
 				espace.bougeActif(-1, 0);
-			
+				f.move(Vector2f(-20, 0));					/////
 				break;
 			case 6:	// Droite		(Bouger)
 				espace.bougeActif(1, 0);
-			
+				f.move(Vector2f(20, 0));					/////
 				break;
-			case 7:	// P (Menu option)
-				menuOption(window, titre, music, music2, music3, joueur);
-				espace.setNomJoueur(joueur.nomJoueur);
+			case 7:	// P
+				menuOption(window, titre, music, music2, music3, espace.getJoueur());
 				break;
-			case 1:	// Esc (retour au menu)	
-
-				enregistrerScore(joueur);
-				afficherMenu(window, titre, music, music2, music3, texture, font, joueur);
-				espace.setNomJoueur(joueur.nomJoueur);
+			case 1:	// Esc
+				afficherMenu(window, titre, music, music2, music3, texture, font, espace.getJoueur());
 				break;
 			default:
 				break;
@@ -218,59 +212,38 @@ int main()
 			// Si une colision est présente
 			if (espace.getColle())
 			{
-				// Ajoute le bloc actif aux occupation de la salle 
+				// Ajoute le bloc actif aux occupation de l'aménagement 
 				// Démare ensuite le prochain bloc tout en trouvant le bloc suivant
-				
 				espace.colleActif();
-				joueur.score += 25;		//ajoute des point au joueur.
 				espace.setColle(false);
 			}
 
-			
 			window.draw(background);
-
+			afficheTitre(window, titre);
+			window.draw(f);
 			espace.afficherInterface();
 			espace.afficheBlocsSalle();
 			afficheTitre(window, titre);
-			afficherInfo(window, espace.getJoueur(), font, text);
 
-			espace.drawActif(); //dessine la piece active	
+			espace.drawActif();
+			
+			textPos.setString(to_string(espace.getActif().getAngle())); 	// Chaîne de caractères à afficher
+			window.draw(textPos);
+			string place = to_string(espace.getActif().getPlace().x)
+				+ "," + to_string(espace.getActif().getPlace().y);
+			textAngle.setString(place); 	// Chaîne de caractères à afficher
+			window.draw(textAngle);
 
 			window.display();
-			
+			sleep(seconds(0));
+
 		} while (ok);
 
 	} while (ok);
-	enregistrerScore(espace.getJoueur());
+	enregistrerScore(window2, espace.getJoueur());
 	return 0;
 }
 
-//Affiche les informations du joueur (nom, lvl, score) dans l'interface de jeu
-void afficherInfo(RenderWindow &window,identite & joueur, Font font, Text text)
-{
-	
-	font.loadFromFile("styles/font_arial.ttf");
-
-	text.setFont(font);
-	text.setString(joueur.nomJoueur);
-	text.setColor(Color::Green);
-	text.setCharacterSize(35);
-	text.setPosition(675, 35);
-	text.setStyle(sf::Text::Underlined);
-	window.draw(text);
-
-	text.setStyle(sf::Text::Regular);
-	text.setColor(Color::Red);
-
-	text.setCharacterSize(30);
-	text.setPosition(650, 295);
-	text.setString(to_string(joueur.level));
-	window.draw(text);
-
-	text.setPosition(655, 355);
-	text.setString(to_string(joueur.score));
-	window.draw(text);
-}
 // Trie en ordre croissant les scores des joueurs.
 void trierInsertion(char nomJoueur[][20], int scoreMax[], int taille)
 {
@@ -288,6 +261,7 @@ void trierInsertion(char nomJoueur[][20], int scoreMax[], int taille)
 		strcpy_s(nomJoueur[j], 20, nomJoueurTemp);
 	}
 }
+
 // Retourne une valeur correspondant au choix saisi entre 'o' et 'n'
 int questionOuiNonSFML(RenderWindow & window2, identite &joueur)
 {
@@ -321,51 +295,43 @@ int questionOuiNonSFML(RenderWindow & window2, identite &joueur)
 	}
 }
 
-//Demande au joueur s'il veux enregistrrer son score et attend une reponse de QuestionOuiNon 
-void enregistrerScore(identite &joueur) {
+// Enregistre le score du joueur dans un fichier.
+void enregistrerScore(RenderWindow & window, identite &joueur) {
 
-
-	RenderWindow window3(VideoMode(633, 460), "TETRIS v1.2 Enregistrement");
-	Texture texture3;
-	Font font;
-	if (!font.loadFromFile("styles/font_arial.ttf"));
-	Text text;
-	if (!texture3.loadFromFile("images/tetris_end.jpg"));	//va chercher le fond d'écran
-	Sprite background(texture3);
-	
-	
+	window.clear();
 
 	int reponse = 0;
 	int longueurNom = 1;
-	
+	Text text;
+
 	text.setColor(Color::Green);
 	text.setFillColor(Color::Green);
+	Font font;
+	if (!font.loadFromFile("styles/font_arial.ttf"));
 	text.setFont(font);
 	text.setPosition(100, 50);
 	text.setCharacterSize(22);
-	window3.draw(background);
 
 	do {
 
 		if (joueur.nouveauJoueur == false) {
-			
-			text.setString("Voulez vous enregistrer par-dessus \n votre ancienne sauvegarde? \n (o / n)? : ");
-			window3.draw(text);
-			window3.display();
-
+			window.display();
+			text.setString("Voulez vous enregistrer par-dessus votre ancienne sauvegarde? (o / n)? : ");
+			window.draw(text);
+			window.display();
 		}
 		else {
-		
-			text.setString("Voulez vous enregistrer votre score? \n (o / n)? : ");
-			window3.draw(text);
-			window3.display();
-
-
+			window.display();
+			text.setString("Voulez vous enregistrer votre score? (o / n)? : ");
+			window.draw(text);
+			window.display();
 		}
-		reponse = questionOuiNonSFML(window3, joueur);
+		reponse = questionOuiNonSFML(window, joueur);
 	} while (reponse != 1 && reponse != 2);
 
-	if (reponse == 1) {						//Enregistre tout les score dans un tableau
+
+	//Enregistre tout les score dans un tableau
+	if (reponse == 1) {		
 
 		ifstream vieuxscore;
 		ofstream nouveauscore;
@@ -373,13 +339,13 @@ void enregistrerScore(identite &joueur) {
 		vieuxscore.open("score.txt", ifstream::in | ifstream::out | ifstream::app);
 		nouveauscore.open("score.txt", ofstream::in | ofstream::out | ofstream::app);
 
-		char listeNomJoueur[20][20] = { '\0' };				//maximum de 30 identite enregistrer
+		char listeNomJoueur[20][20] = { '\0' };				//maximum de 30 joueur enregistrer
 		int levelMax[20];
 		int scoreMax[20];
 
 		int cptJoueur = 0;
 
-		if (joueur.nouveauJoueur == false) {					//si le identite existe, remplace sont score par le nouveau
+		if (joueur.nouveauJoueur == false) {				//si le joueur existe, remplace sont score par le nouveau
 			while (vieuxscore >> listeNomJoueur[cptJoueur])
 			{
 				vieuxscore >> levelMax[cptJoueur];
@@ -394,21 +360,19 @@ void enregistrerScore(identite &joueur) {
 			trierInsertion(listeNomJoueur, scoreMax, cptJoueur);
 
 
-
-
-			for (int i = 0; i < joueur.rang - 1; i++)		// Écrit tout les autre identite avant
+			for (int i = 0; i < joueur.rang - 1; i++)		// Écrit tout les autre joueur avant
 			{
 				nouveauscore << left << setw(20) << listeNomJoueur[i] << setw(20) << levelMax[i] << scoreMax[i] << endl;
 			}
 			nouveauscore << left << setw(20) << joueur.nomJoueur << setw(20) << joueur.level << joueur.score;
 
-			for (int i = 0 + joueur.rang; i < cptJoueur; i++) // Écrit tout les autre identite apres
+			for (int i = 0 + joueur.rang; i < cptJoueur; i++) // Écrit tout les autre joueur apres
 			{
 				nouveauscore << endl << left << setw(20) << listeNomJoueur[i] << setw(20) << levelMax[i] << scoreMax[i];
 			}
 		}
 
-		else										//inscrit le nouveau identite a la fin de la liste de score
+		else										//inscrit le nouveau joueur a la fin de la liste de score
 		{
 			nouveauscore << endl << left << setw(20) << joueur.nomJoueur << setw(20) << joueur.level << joueur.score;
 			joueur.nouveauJoueur = false;
@@ -417,21 +381,21 @@ void enregistrerScore(identite &joueur) {
 	}
 }
 
-// Affiche le nom, le level et le score des 10 meilleurs joueurs dans un fichier score
+// Affiche le score des anciens joueurs.
 void afficherScore(RenderWindow &windowMenu)
 {
 
 	Text text;
 	Font font;
 	Texture texture;
-	if (!font.loadFromFile("styles/font_arial.ttf"));		//va chercher la police pour le texte
-	if (!texture.loadFromFile("images/back_main.jpg"));	//va chercher le fond d'écran
+	if (!font.loadFromFile("styles/font_arial.ttf"));	// Va chercher la police pour le texte
+	if (!texture.loadFromFile("images/back_main.jpg"));	// Va chercher le fond d'écran
 
 	Sprite background(texture);
-	windowMenu.draw(background);		//affiche le fond d'écran	
+	windowMenu.draw(background);						//Affiche le fond d'écran	
 
 	text.setFont(font);
-	text.setColor(Color::White);
+	text.setColor(Color::Red);
 	string nomJoueur;
 	int lvl;
 	int score;
@@ -441,7 +405,7 @@ void afficherScore(RenderWindow &windowMenu)
 	text.setOutlineThickness(2);
 	text.setOutlineColor(Color::Black);
 	text.setPosition(400, 50);
-	text.setString("10 Meilleurs Scores!");
+	text.setString("10 Meilleurs score!");
 	windowMenu.draw(text);
 
 	text.setPosition(300, 100);
@@ -455,6 +419,7 @@ void afficherScore(RenderWindow &windowMenu)
 	text.setString("Score");
 	windowMenu.draw(text);
 
+	// Affiche les dix dernier meilleurs joueurs 
 	for (size_t i = 0; i < 10; i++)
 	{
 		fichierScore >> nomJoueur >> lvl >> score;
@@ -474,36 +439,25 @@ void afficherScore(RenderWindow &windowMenu)
 	}
 	windowMenu.display();
 
+	// Vérifie les évènements
 	Event event;
 	while (windowMenu.isOpen())
 	{
-
-
 		while (windowMenu.pollEvent(event))
 		{
-			// check the type of the event...
 			switch (event.type)
 			{
-				// window closed
-			case Event::Closed:
-			{
+			case Event::Closed:		// window closed
 				exit(0);
-			}
-			// key pressed
-			case Event::KeyPressed:
-
+			case Event::KeyPressed:	// key pressed
 				if (event.key.code == Keyboard::Escape) // Pour quitter
-				{
 					return;
-
-				}
-
 			}
 		}
 	}
 }
 
-// Demande au joueur s'il veut reprendre le profil d'un joueur enregistrer dans le fichier score
+// Demande la saisie pour si le joueur veut continuer avec une ancienne sauvegarde.
 int questionEnregistrement(RenderWindow & window2, Font font, identite & identite)
 {
 	window2.clear();
@@ -513,11 +467,11 @@ int questionEnregistrement(RenderWindow & window2, Font font, identite & identit
 	window2.display();
 	Text text;
 
-	
+	if (!font.loadFromFile("styles/font_arial.ttf")); // choix de la police à utiliser
 	text.setFont(font);
-	text.setString("Ce nom appartient a un identite contenant \nles statistiques suivante :");
+	text.setString("Ce nom appartient a un joueur contenant \nles statistiques suivante :");
 	text.setCharacterSize(22);
-	text.setPosition(25, 130);
+	text.setPosition(25, 100);
 	text.setColor(Color::Black);
 	window2.draw(text);
 
@@ -525,7 +479,7 @@ int questionEnregistrement(RenderWindow & window2, Font font, identite & identit
 	char levelMax[15] = "Level max : ";
 	levelMax[12] = identite.level + '0';
 	text.setString(levelMax);
-	text.setPosition(25, 185);
+	text.setPosition(25, 160);
 	window2.draw(text);
 
 	char textScoreMax[15] = "Score max : \0";
@@ -533,26 +487,23 @@ int questionEnregistrement(RenderWindow & window2, Font font, identite & identit
 	sprintf(scoreMax, "%d", identite.score);
 	strcat_s(textScoreMax, scoreMax);
 	text.setString(textScoreMax);
-	text.setPosition(25, 225);
+	text.setPosition(25, 200);
 	window2.draw(text);
 
 	text.setString("Voulez vous continer avec cet enregistrement? \n Appuyez sur O ou sur N");
-	text.setPosition(25, 275);
+	text.setPosition(25, 250);
 	window2.draw(text);
 	/*identiteEnregistrer.setPosition(25, 25);
 	identiteEnregistrer.setFillColor(Color::Black);*/
 	/*window2.draw(identiteEnregistrer);*/
 	window2.display();
 	if (questionOuiNonSFML(window2, identite) != 1)
-	{
-
 		return 2;
-	}
 	identite.nouveauJoueur = false;
 	return 1;
 }
 
-// Verifie si le nom saisie est déja dans le fichier score
+// Trie les enregistrements. (Laby ?)
 int listeEnregistrement(RenderWindow & window2, identite & identite)
 {
 	ifstream labyrinthe;
@@ -584,14 +535,11 @@ int listeEnregistrement(RenderWindow & window2, identite & identite)
 
 		if (identite.nomJoueur == sauvegardeNomJoueur)
 		{//si le nom entrer existe dans le fichier score
-
 			sauvegardeExiste = true;
 			break;
 		}
-		else {
-
+		else
 			sauvegardeExiste = false;
-		}
 
 	}
 
@@ -604,31 +552,24 @@ int listeEnregistrement(RenderWindow & window2, identite & identite)
 	}
 	else
 		return 2;
-
-
 }
 
-// Demande au joueur de saisir un nom et attend qu'il appuie sur la touche enter
-string saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identite & joueur)
+// Saisie le nom du joueur.
+void saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identite & joueur)
 {
 	Image icon;
 	Text text;
-	text.setFont(font);
 	icon.loadFromFile("images/icon.png");			//va chercher l'image de l'icone
 	window2.setIcon(128, 128, icon.getPixelsPtr()); // Affiche l'icone
 
+	if (!font.loadFromFile("styles/font_arial.ttf"));		//va chercher la police pour le texte
 	if (!texture.loadFromFile("images/back_option.jpg"));	//va chercher le fond d'écran
-
-	RectangleShape nomJoueur(Vector2f(400, 100));
-	Texture textureNom;
-	if (!textureNom.loadFromFile("images/back_option.jpg", IntRect(100, 100, 400, 100)));
-	nomJoueur.setTexture(&textureNom);
-	nomJoueur.setPosition(100, 100);
 
 	Sprite background(texture);
 	window2.draw(background);		//affiche le fond d'écran	
 
-	text.setString("Quel est votre nom? \n (10 caractere Max)"); 	// choix de la chaîne de caractères à afficher
+	text.setFont(font);
+	text.setString("Quel est votre nom?"); 	// choix de la chaîne de caractères à afficher
 	text.setPosition(100, 15);		// position du texte
 	text.setColor(Color::Red);   // choix de la couleur du texte
 	text.setOutlineColor(Color::Black);
@@ -638,6 +579,7 @@ string saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identi
 	window2.display();
 
 	std::string s;
+
 	while (window2.isOpen())
 	{
 		//Event processing.
@@ -645,69 +587,45 @@ string saisirNomJoueur(RenderWindow &window2, Font font, Texture texture, identi
 		while (window2.pollEvent(event)) {
 		}
 		while (window2.waitEvent(event)) {
-			Sprite background(texture);
-			window2.draw(background);		//affiche le fond d'écran	
-			text.setCharacterSize(30);
-		
-			text.setString("Quel est votre nom? \n (10 caractere Max)"); 	// choix de la chaîne de caractères à afficher
-			text.setPosition(100, 15);		// position du texte
-			text.setColor(Color::Red);   // choix de la couleur du texte
-			text.setOutlineColor(Color::Black);
-			text.setOutlineThickness(2);
-
-			window2.draw(text);
 			if (event.type == Event::Closed)
 				window2.close();
-		
-			if (event.type == Event::TextEntered){
-				if (event.key.code == Keyboard::Escape)
-						window2.close();
+			if (event.type == Event::TextEntered) {
 				if (event.key.code == 8 && s.size() != 0)		//touche backspace
 				{
 					s.pop_back();  //Enleve le dernier char dans la string
 				}
-				else if (event.key.code == 13 ) //touche enter
+				else if (event.key.code == 13 && s.size() != 0) //touche enter
 				{
-					if (s.size() != 0)
-					{
-						joueur.nomJoueur = s;
-						return joueur.nomJoueur;
-					}
-					else
-					{
-						text.setColor(Color::Cyan);
-						text.setCharacterSize(20);
-						text.setString("Veuillez saisir au minimum une lettre ou un chiffre"); 	// choix de la chaîne de caractères à afficher
-						text.setPosition(0, 400);		// position du texte
-						window2.draw(text);
-					}
+					joueur.nomJoueur = s;
+					return;
 				}
-				else if (
-					((event.key.code >= 97 && event.key.code <= 122)
-					|| event.key.code == 32 || (event.key.code == Keyboard::RShift || event.key.code == Keyboard::LShift)
-					|| (event.key.code >= 48 && event.key.code <= 57))
-					&& (s.size() <= 10))	// caractere ASCII (A - Z, 0 - 9 )
+				else if ((event.key.code >= 97 && event.key.code <= 122)
+					|| event.key.code == 32
+					|| (event.key.code >= 48 && event.key.code <= 57))	// caractere ASCII (A - Z, 0 - 9 )
 				{
 					s.push_back((char)event.text.unicode); // ajoute un char a la string
 				}
 
-				if (s.size() != 0)
-				{
-					
-					window2.draw(nomJoueur);	//Affiche un rectangle vide
-
-					text.setString(s); 	// choix de la chaîne de caractères à afficher
-					text.setPosition(100, 100);		// position du texte
-					text.setColor(Color::Green);   // choix de la couleur du texte
-
-					window2.draw(text);
-				}
+				RectangleShape nomJoueur(Vector2f(400, 50));
 				window2.display();
 
+				if (!texture.loadFromFile("images/back_option.jpg", IntRect(100, 50, 500, 50)));
+				nomJoueur.setTexture(&texture);
+
+				nomJoueur.setPosition(100, 50);
+				window2.draw(nomJoueur);	//Affiche un rectangle vide
+
+				text.setString(s); 	// choix de la chaîne de caractères à afficher
+				text.setPosition(100, 50);		// position du texte
+				text.setColor(Color::Green);   // choix de la couleur du texte
+
+				window2.draw(text);
+
+				window2.display();
 			}
-			
+
 		}
-	
+
 	}
 
 }
@@ -763,7 +681,8 @@ int saisie(RenderWindow & window, Text titre[6],
 			// Arrête le jeu... menu?
 			else if (event.key.code == Keyboard::Pause || event.key.code == Keyboard::P)
 			{
-				return 7;
+				/// Pause if false; if true: Unpause
+				menuOption(window, titre, music, music2, music3, joueur);
 			}
 			// Met la musique sur stop
 			else if (event.key.code == Keyboard::M)
@@ -817,218 +736,210 @@ int menuOption(RenderWindow & window, Text titre[6],
 {
 	window.setVisible(false);	//Cache le Menu principal;
 
-
 	RenderWindow windowOption(VideoMode(1000, 800), "TETRIS Option"); // Crée une nouvelle fenetre
-	Event event;
 
-	for (size_t i = 0; i < 5; i++)
+	Texture texture;
+	Image icon;
+	icon.loadFromFile("images/icon.png");		//cherche l'image de l'icone
+	windowOption.setIcon(128, 128, icon.getPixelsPtr());	//Défini une icone pour la fenetre
+
+	RectangleShape btnMusique(Vector2f(300, 100));
+	RectangleShape btnMusiquePowerOn(Vector2f(50, 50));
+	RectangleShape btnMusiquePowerOff(Vector2f(50, 50));
+	RectangleShape btnMusiqueChoix1(Vector2f(200, 50));
+	RectangleShape btnMusiqueChoix2(Vector2f(200, 50));
+	RectangleShape btnMusiqueChoix3(Vector2f(200, 50));
+	RectangleShape btnRetour(Vector2f(100, 50));
+	RectangleShape btnNomJoueur(Vector2f(300, 125));
+
+	RectangleShape btnAutre(Vector2f(300, 100));
+
+	Font font;
+	Text text;
+
+	if (!texture.loadFromFile("images/back_main.jpg"));  //Si la texture est introuvable, envoie un message d'erreur
+
+	Sprite background(texture);
+
+	windowOption.draw(background); // Affiche le fond d'écran
+
+	if (!font.loadFromFile("styles/font_arial.ttf")); // choix de la police à utiliser
+
+											   //afficheTitre(windowOption, titre);	/// changer les valeur pour 340, 50, 60 avant
+
+	text.setFont(font);
+	text.setCharacterSize(30); // choix de la taille des caractères exprimée en pixels, pas en points !					
+	text.setStyle(Text::Bold); 	// choix du style du texte
+
+	btnMusique.setOutlineThickness(5);  //défini la grosseur de la bordure
+	btnMusique.setOutlineColor(Color::Red); //défini la couleur de la bordure
+	btnMusique.setPosition(350, 150); //défini la position de la bordure
+
+	if (!texture.loadFromFile("images/back_option.jpg", IntRect(0, 190, 300, 100))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
+	btnMusique.setTexture(&texture);	//défini la texture du bouton
+	texture.setSmooth(true);			//addoucie la texture de l'image
+
+	text.setString("Musique"); 	// choix de la chaîne de caractères à afficher
+	text.setPosition(450, 188);		// position du texte
+	text.setColor(Color::Black);   // choix de la couleur du texte
+
+	windowOption.draw(btnMusique);		//Dessine le bouton mussique
+	windowOption.draw(text);			//Dessine le texte de bouton mussique
+
+	btnMusiquePowerOn.setOutlineThickness(5);
+	btnMusiquePowerOn.setOutlineColor(Color::Red);
+	btnMusiquePowerOn.setPosition(350, 275);
+
+	if (!texture.loadFromFile("images/back_option.jpg", IntRect(150, 150, 50, 50)));
+	btnMusiquePowerOn.setTexture(&texture);
+	texture.setSmooth(true);
+	if (music.getVolume() == 0)
 	{
-		titre[i].setPosition(Vector2f(350 + (i* titre[i].getCharacterSize()), 50));
+		btnMusiquePowerOn.setFillColor(Color::White);
 	}
-	titre[5].setPosition(Vector2f(350 + (5 * titre[5].getCharacterSize()) - 25, 50));
+	else
+	{
+		btnMusiquePowerOn.setFillColor(Color::Magenta);
+	}
+
+
+	text.setString("On"); 	// choix de la chaîne de caractères à afficher
+	text.setPosition(352, 278);		// position du texte
+	text.setColor(Color::Black);   // choix de la couleur du texte
+	windowOption.draw(btnMusiquePowerOn);
+	windowOption.draw(text);
+
+
+	btnMusiquePowerOff.setOutlineThickness(5);
+	btnMusiquePowerOff.setOutlineColor(Color::Red);
+	btnMusiquePowerOff.setPosition(600, 275);
+	if (!texture.loadFromFile("images/back_option.jpg", IntRect(150, 150, 50, 50)));
+	texture.setSmooth(true);
+
+	btnMusiquePowerOff.setTexture(&texture);
+	if (music.getVolume() == 0)
+	{
+		btnMusiquePowerOff.setFillColor(Color::Magenta);
+	}
+
+	text.setString("Off"); 	// choix de la chaîne de caractères à afficher
+	text.setPosition(605, 278);		// position du texte
+	text.setColor(Color::Black);   // choix de la couleur du texte
+
+	windowOption.draw(btnMusiquePowerOff);
+	windowOption.draw(text);
+
+	btnMusiqueChoix1.setOutlineThickness(5);
+	btnMusiqueChoix1.setOutlineColor(Color::Red);
+	btnMusiqueChoix1.setPosition(350, 355);
+
+	if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50)));
+	texture.setSmooth(true);
+	btnMusiqueChoix1.setTexture(&texture);
+	if (music.getStatus() == sf::Music::Playing)
+	{
+		btnMusiqueChoix1.setFillColor(Color::Magenta);
+	}
+	else
+	{
+		btnMusiqueChoix1.setFillColor(Color::White);
+	}
+
+	text.setString("Musique 1"); 	// choix de la chaîne de caractères à afficher
+	text.setPosition(355, 355);		// position du texte
+	text.setColor(Color::Black);   // choix de la couleur du texte
+
+	windowOption.draw(btnMusiqueChoix1);
+	windowOption.draw(text);
+
+
+	btnMusiqueChoix2.setOutlineThickness(5);
+	btnMusiqueChoix2.setOutlineColor(Color::Red);
+	btnMusiqueChoix2.setPosition(350, 420);
+	btnMusiqueChoix2.setTexture(&texture);
+
+	if (music2.getStatus() == sf::Music::Playing)
+	{
+		btnMusiqueChoix2.setFillColor(Color::Magenta);
+	}
+	else
+	{
+		btnMusiqueChoix2.setFillColor(Color::White);
+	}
+
+	text.setString("Musique 2"); 	// choix de la chaîne de caractères à afficher
+	text.setPosition(355, 420);		// position du texte
+	text.setColor(Color::Black);   // choix de la couleur du texte
+
+	windowOption.draw(btnMusiqueChoix2);
+	windowOption.draw(text);
+
+
+	btnMusiqueChoix3.setOutlineThickness(5);
+	btnMusiqueChoix3.setOutlineColor(Color::Red);
+	btnMusiqueChoix3.setPosition(350, 485);
+	btnMusiqueChoix3.setTexture(&texture);
+
+	text.setString("Musique 3"); 	// choix de la chaîne de caractères à afficher
+	text.setPosition(355, 485);		// position du texte
+	text.setColor(Color::Black);   // choix de la couleur du texte
+
+	if (music3.getStatus() == sf::Music::Playing)
+	{
+		btnMusiqueChoix3.setFillColor(Color::Magenta);
+	}
+	else
+	{
+		btnMusiqueChoix3.setFillColor(Color::White);
+	}
+	windowOption.draw(btnMusiqueChoix3);
+	windowOption.draw(text);
+
+	btnRetour.setOutlineThickness(5);
+	btnRetour.setOutlineColor(Color::Red);
+	btnRetour.setPosition(10, 10);
+
+	if (!texture.loadFromFile("images/back_option.jpg", IntRect(190, 310, 50, 50)));
+	texture.setSmooth(true);
+	btnRetour.setTexture(&texture);
+
+	text.setString("Retour"); 	// choix de la chaîne de caractères à afficher
+	text.setPosition(10, 15);		// position du texte
+	text.setColor(Color::Black);   // choix de la couleur du texte
+
+	windowOption.draw(btnRetour);
+	windowOption.draw(text);
+
+	btnNomJoueur.setOutlineThickness(5);
+	btnNomJoueur.setOutlineColor(Color::Red);
+	btnNomJoueur.setPosition(350, 550);
+	if (!texture.loadFromFile("images/back_option.jpg", IntRect(90, 290, 300, 100)));
+	texture.setSmooth(true);
+	btnNomJoueur.setTexture(&texture);
+
+	if (joueur.nomJoueur != "Nouveau Joueur")
+	{
+		btnNomJoueur.setFillColor(Color::Magenta);
+	}
+	text.setString("Nom du joueur :"); 	// choix de la chaîne de caractères à afficher
+	text.setPosition(375, 565);		// position du texte
+	windowOption.draw(btnNomJoueur);
+	windowOption.draw(text);
+
+	text.setString(joueur.nomJoueur); 	// choix de la chaîne de caractères à afficher
+	text.setPosition(375, 625);		// position du texte
+
+	windowOption.draw(text);
+	windowOption.display();
+
+
+
+	Event event;
 	while (window.isOpen())
 	{
-		Texture texture;
-		Image icon;
-		icon.loadFromFile("images/icon.png");		//cherche l'image de l'icone
-		windowOption.setIcon(128, 128, icon.getPixelsPtr());	//Défini une icone pour la fenetre
-
-		Font font;
-		Text text;
-
-		if (!texture.loadFromFile("images/back_main.jpg"));  //Si la texture est introuvable, envoie un message d'erreur
-
-		if (!font.loadFromFile("styles/font_arial.ttf")); // choix de la police à utiliser
-
-		Sprite background(texture);
-
-		windowOption.draw(background); // Affiche le fond d'écran
-
-
-
-		const int nbrBouton = 10;
-
-		boutonClick bouton[nbrBouton];
-
-		for (size_t i = 0; i < nbrBouton; i++)
-		{
-			bouton[i].rectangle.setSize(Vector2f(bouton[i].hauteur, bouton[i].largeur));
-			bouton[i].rectangle.setOutlineThickness(5);  //défini la grosseur de la bordure
-			bouton[i].rectangle.setOutlineColor(Color::Red); //défini la couleur de la bordure
-			bouton[i].text.setCharacterSize(30);
-			bouton[i].text.setStyle(Text::Bold);
-			bouton[i].text.setColor(Color::Black);
-			bouton[i].fondImage.setSmooth(true);
-			bouton[i].text.setFont(font);
-		}
-
-		afficheTitre(windowOption, titre);
-
-		bouton[0].hauteur = 100;
-		bouton[0].largeur = 300;
-		bouton[0].rectangle.setSize(Vector2f(bouton[0].largeur, bouton[0].hauteur));
-		bouton[0].rectangle.setPosition(350, 150); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(0, 200, 300, 100))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[0].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[0].text.setString("Option"); 	// choix de la chaîne de caractères à afficher
-		bouton[0].text.setPosition(450, 188);		// position du texte
-
-		windowOption.draw(bouton[0].rectangle);		//Dessine le bouton mussique
-		windowOption.draw(bouton[0].text);	//Dessine le texte de bouton mussique
-
-		bouton[7].hauteur = 100;
-		bouton[7].largeur = 200;
-		bouton[7].rectangle.setSize(Vector2f(bouton[7].largeur, bouton[7].hauteur));
-		bouton[7].rectangle.setPosition(250, 275); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(0, 300, 225, 100))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[7].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[7].text.setString("Volume"); 	// choix de la chaîne de caractères à afficher
-		bouton[7].text.setPosition(290, 305);		// position du texte
-		windowOption.draw(bouton[7].rectangle);		//Dessine le bouton mussique
-		windowOption.draw(bouton[7].text);	//Dessine le texte de bouton mussique
-
-		bouton[1].hauteur = 40;
-		bouton[1].largeur = 50;
-		bouton[1].rectangle.setSize(Vector2f(bouton[1].largeur, bouton[1].hauteur));
-		bouton[1].rectangle.setPosition(585, 310); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[1].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[1].text.setString("On"); 	// choix de la chaîne de caractères à afficher
-		bouton[1].text.setPosition(590, 275);		// position du texte
-
-		bouton[2].hauteur = 40;
-		bouton[2].largeur = 50;
-		bouton[2].rectangle.setSize(Vector2f(bouton[2].largeur, bouton[2].hauteur));
-		bouton[2].rectangle.setPosition(760, 310); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[2].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[2].text.setString("Off"); 	// choix de la chaîne de caractères à afficher
-		bouton[2].text.setPosition(765, 275);		// position du texte
-
-		bouton[1].text.setColor(Color::Green);
-		bouton[2].text.setColor(Color::Green);
-
-		if (music.getVolume() == 0)
-		{
-			bouton[1].rectangle.setFillColor(Color::White);
-			bouton[2].rectangle.setFillColor(Color::Red);
-		}
-		else
-		{
-			bouton[1].rectangle.setFillColor(Color::Red);
-			bouton[2].rectangle.setFillColor(Color::White);
-		}
-
-
-		windowOption.draw(bouton[1].rectangle);		//Dessine le bouton mussique
-		windowOption.draw(bouton[1].text);	//Dessine le texte de bouton mussique
-		windowOption.draw(bouton[2].rectangle);		//Dessine le bouton mussique
-		windowOption.draw(bouton[2].text);	//Dessine le texte de bouton mussique
-
-
-
-		bouton[8].hauteur = 200;
-		bouton[8].largeur = 200;
-		bouton[8].rectangle.setSize(Vector2f(bouton[8].largeur, bouton[8].hauteur));
-		bouton[8].rectangle.setPosition(250, 400); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(150, 150, 200, 200))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[8].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[8].text.setString("Musique"); 	// choix de la chaîne de caractères à afficher
-		bouton[8].text.setPosition(290, 475);		// position du texte
-		windowOption.draw(bouton[8].rectangle);		//Dessine le bouton mussique
-		windowOption.draw(bouton[8].text);	//Dessine le texte de bouton mussique
-		
-
-		bouton[3].hauteur = 50;
-		bouton[3].largeur = 400;
-		bouton[3].rectangle.setSize(Vector2f(bouton[3].largeur, bouton[3].hauteur));
-		bouton[3].rectangle.setPosition(500, 400); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[3].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[3].text.setString("Snack-Bar Chez Remond"); 	// choix de la chaîne de caractères à afficher
-		bouton[3].text.setPosition(505, 405);		// position du texte
-
-		bouton[4].hauteur = 50;
-		bouton[4].largeur = 400;
-		bouton[4].rectangle.setSize(Vector2f(bouton[4].largeur, bouton[4].hauteur));
-		bouton[4].rectangle.setPosition(500, 475); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[4].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[4].text.setString("The Turntable Turnabout"); 	// choix de la chaîne de caractères à afficher
-		bouton[4].text.setPosition(505, 480);		// position du texte
-
-		bouton[5].hauteur = 50;
-		bouton[5].largeur = 400;
-		bouton[5].rectangle.setSize(Vector2f(bouton[4].largeur, bouton[4].hauteur));
-		bouton[5].rectangle.setPosition(500, 550); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[5].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[5].text.setString("Tetris - Theme 'A' Acapella"); 	// choix de la chaîne de caractères à afficher
-		bouton[5].text.setPosition(505, 555);		// position du texte
-
-		if (music.getStatus() == sf::Music::Playing)
-		{
-			bouton[3].rectangle.setFillColor(Color::Magenta);
-			bouton[4].rectangle.setFillColor(Color::White);
-			bouton[5].rectangle.setFillColor(Color::White);
-		}
-		else if (music2.getStatus() == sf::Music::Playing)
-		{
-			bouton[3].rectangle.setFillColor(Color::White);
-			bouton[4].rectangle.setFillColor(Color::Magenta);
-			bouton[5].rectangle.setFillColor(Color::White);
-		}
-		else if (music3.getStatus() == sf::Music::Playing)
-		{
-			bouton[3].rectangle.setFillColor(Color::White);
-			bouton[4].rectangle.setFillColor(Color::White);
-			bouton[5].rectangle.setFillColor(Color::Magenta);
-		}
-
-
-		windowOption.draw(bouton[3].rectangle);		//Dessine le bouton musique
-		windowOption.draw(bouton[3].text);	//Dessine le texte de bouton musique
-		windowOption.draw(bouton[4].rectangle);		//Dessine le bouton musique
-		windowOption.draw(bouton[4].text);	//Dessine le texte de bouton musique
-		windowOption.draw(bouton[5].rectangle);		//Dessine le bouton musique
-		windowOption.draw(bouton[5].text);	//Dessine le texte de bouton musique
-
-		bouton[6].text.setCharacterSize(28);
-		bouton[6].hauteur = 100;
-		bouton[6].largeur = 200;
-		bouton[6].rectangle.setSize(Vector2f(bouton[6].largeur, bouton[6].hauteur));
-		bouton[6].rectangle.setPosition(250, 625); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(50, 400, 225, 100))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[6].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[6].text.setString("Nom du joueur"); 	// choix de la chaîne de caractères à afficher
-		bouton[6].text.setPosition(250, 660);		// position du texte
-
-
-		windowOption.draw(bouton[6].rectangle);		//Dessine le bouton musique
-		windowOption.draw(bouton[6].text);	//Dessine le texte de bouton musique
-
-		bouton[9].text.setCharacterSize(30);
-		
-		bouton[9].hauteur = 75;
-		bouton[9].largeur = 225;
-		bouton[9].text.setColor(Color::Red);
-		bouton[9].text.setOutlineColor(Color::Black);
-		bouton[9].text.setOutlineThickness(2);
-		bouton[9].rectangle.setSize(Vector2f(bouton[9].largeur, bouton[9].hauteur));
-		bouton[9].rectangle.setPosition(585, 633); //défini la position de la bordure
-		if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50))); // Si la texture ne peux etre 'loader' effiche un message d'erreur dans la console
-		bouton[9].rectangle.setTexture(&texture);	//défini la texture du bouton
-		bouton[9].text.setString(joueur.nomJoueur); 	// choix de la chaîne de caractères à afficher
-		bouton[9].text.setPosition(625, 655);		// position du texte
-
-
-		windowOption.draw(bouton[9].rectangle);		//Dessine le bouton musique
-		windowOption.draw(bouton[9].text);	//Dessine le texte de bouton musique
-
-
 		while (windowOption.pollEvent(event))
 		{
-			windowOption.display();
+
 			switch (event.type)
 			{
 			case Event::Closed:
@@ -1042,30 +953,63 @@ int menuOption(RenderWindow & window, Text titre[6],
 			case Event::MouseButtonPressed:
 				Mouse::getPosition(windowOption);
 				// Si le joueur appuie sur le bouton On, met le volume de la musique a 100 et change le fond du bouton
-				if ((event.mouseButton.x > 585 && event.mouseButton.x < 635) && (event.mouseButton.y > 310 && event.mouseButton.y < 360))
+				if ((event.mouseButton.x > 350 && event.mouseButton.x < 400) && (event.mouseButton.y > 275 && event.mouseButton.y < 325))
 				{
-					
 					//Option musique on
-
+					if (!texture.loadFromFile("images/back_option.jpg", IntRect(150, 150, 50, 50)));
+					windowOption.display();
 					music.setVolume(100);
 					music2.setVolume(100);
 					music3.setVolume(100);
-					bouton[1].rectangle.setFillColor(Color::Red);
-					bouton[2].rectangle.setFillColor(Color::White);
+					btnMusiquePowerOn.setFillColor(Color::Magenta);
+					btnMusiquePowerOn.setTexture(&texture);
+					text.setString("On"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(352, 278);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+					windowOption.draw(btnMusiquePowerOn);
+					windowOption.draw(text);
+
+					btnMusiquePowerOff.setFillColor(Color::White);
+					btnMusiquePowerOff.setTexture(&texture);
+					/*if (!texture.loadFromFile("images/back_button.jpg", IntRect(0, 0, 300, 100)));*/
+					text.setString("Off"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(605, 278);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+					windowOption.draw(btnMusiquePowerOff);
+					windowOption.draw(text);
+
+					windowOption.display();
 				}
 				// Si le joueur appuie sur le bouton Off, Met le volume de la musique a 0 et change le fond du bouton
-				else if ((event.mouseButton.x > 760 && event.mouseButton.x < 800) && (event.mouseButton.y > 310 && event.mouseButton.y < 360))
+				else if ((event.mouseButton.x > 600 && event.mouseButton.x < 650) && (event.mouseButton.y > 275 && event.mouseButton.y < 325))
 				{
-
+					if (!texture.loadFromFile("images/back_option.jpg", IntRect(150, 150, 50, 50)));
+					btnMusiquePowerOn.setTexture(&texture);
+					windowOption.display();
 					music.setVolume(0);
 					music2.setVolume(0);
 					music3.setVolume(0);
-					bouton[1].rectangle.setFillColor(Color::White);
-					bouton[2].rectangle.setFillColor(Color::Red);
+					btnMusiquePowerOn.setFillColor(Color::White);
+					text.setString("On"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(352, 278);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+					windowOption.draw(btnMusiquePowerOn);
+					windowOption.draw(text);
 
+					btnMusiquePowerOff.setTexture(&texture);
+					btnMusiquePowerOff.setFillColor(Color::Magenta);
+					/*if (!texture.loadFromFile("images/back_button.jpg", IntRect(0, 0, 300, 100)));*/
+					text.setString("Off"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(605, 278);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+					windowOption.draw(btnMusiquePowerOff);
+					windowOption.draw(text);
+
+
+					windowOption.display();
 				}
 				// Si le joueur appuie sur le bouton Musique 1, fait jouer la musique correspondante et change le fond du bouton
-				else if ((event.mouseButton.x > 500 && event.mouseButton.x < 900) && (event.mouseButton.y > 400 && event.mouseButton.y < 450))
+				else if ((event.mouseButton.x > 350 && event.mouseButton.x < 550) && (event.mouseButton.y > 355 && event.mouseButton.y < 405))
 				{
 					if (music.getStatus() != sf::Music::Playing)
 					{
@@ -1075,9 +1019,39 @@ int menuOption(RenderWindow & window, Text titre[6],
 						music.play();
 					}
 
+					windowOption.display();
+					if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50)));
+
+					btnMusiqueChoix1.setFillColor(Color::Magenta);
+					text.setString("Musique 1"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(355, 357);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+
+					windowOption.draw(btnMusiqueChoix1);
+					windowOption.draw(text);
+
+
+					btnMusiqueChoix2.setFillColor(Color::White);
+					text.setString("Musique 2"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(355, 422);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+
+					windowOption.draw(btnMusiqueChoix2);
+					windowOption.draw(text);
+
+
+					btnMusiqueChoix3.setFillColor(Color::White);
+					text.setString("Musique 3"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(355, 487);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+
+					windowOption.draw(btnMusiqueChoix3);
+					windowOption.draw(text);
+
+					windowOption.display();
 				}
 				// Si le joueur appuie sur le bouton Musique 2, fait jouer la musique correspondante et change le fond du bouton
-				else if ((event.mouseButton.x > 500 && event.mouseButton.x < 900) && (event.mouseButton.y > 475 && event.mouseButton.y < 525))
+				else if ((event.mouseButton.x > 350 && event.mouseButton.x < 550) && (event.mouseButton.y > 420 && event.mouseButton.y < 470))
 				{
 
 					if (music2.getStatus() != sf::Music::Playing)
@@ -1088,10 +1062,38 @@ int menuOption(RenderWindow & window, Text titre[6],
 						music2.play();
 					}
 
+					windowOption.display();
+					if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50)));
+					btnMusiqueChoix1.setFillColor(Color::White);
+					text.setString("Musique 1"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(355, 357);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
 
+					windowOption.draw(btnMusiqueChoix1);
+					windowOption.draw(text);
+
+
+					btnMusiqueChoix2.setFillColor(Color::Magenta);
+					text.setString("Musique 2"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(355, 422);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+
+					windowOption.draw(btnMusiqueChoix2);
+					windowOption.draw(text);
+
+
+					btnMusiqueChoix3.setFillColor(Color::White);
+					text.setString("Musique 3"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(355, 487);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+
+					windowOption.draw(btnMusiqueChoix3);
+					windowOption.draw(text);
+
+					windowOption.display();
 				}
 				// Si le joueur appuie sur le bouton Musique 3, fait jouer la musique correspondante et change le fond du bouton
-				else if ((event.mouseButton.x > 500 && event.mouseButton.x < 900) && (event.mouseButton.y > 550 && event.mouseButton.y < 600))
+				else if ((event.mouseButton.x > 350 && event.mouseButton.x < 550) && (event.mouseButton.y > 485 && event.mouseButton.y < 535))
 				{
 					if (music3.getStatus() != sf::Music::Playing)
 					{
@@ -1100,18 +1102,48 @@ int menuOption(RenderWindow & window, Text titre[6],
 						music3.openFromFile("styles/music3.ogg");
 						music3.play();
 					}
+					if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50)));
+					windowOption.display();
+					btnMusiqueChoix1.setFillColor(Color::White);
+					text.setString("Musique 1"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(355, 357);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
 
+					windowOption.draw(btnMusiqueChoix1);
+					windowOption.draw(text);
+
+
+					btnMusiqueChoix2.setFillColor(Color::White);
+					text.setString("Musique 2"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(355, 422);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+
+					windowOption.draw(btnMusiqueChoix2);
+					windowOption.draw(text);
+
+
+					btnMusiqueChoix3.setFillColor(Color::Magenta);
+					text.setString("Musique 3"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(355, 487);		// position du texte
+					text.setColor(Color::Black);   // choix de la couleur du texte
+
+					windowOption.draw(btnMusiqueChoix3);
+					windowOption.draw(text);
+
+
+					windowOption.display();
 				}
 				// Si l'utilisateur appuie sur le bouton du Nom du joueur, ouvre une fenetre et demande a l'utilisateur d'entrer un nom
-				else if ((event.mouseButton.x > 585 && event.mouseButton.x < 815) && (event.mouseButton.y > 633 && event.mouseButton.y < 708))
+				else if ((event.mouseButton.x > 350 && event.mouseButton.x < 650) && (event.mouseButton.y > 550 && event.mouseButton.y < 700))
 				{
 					RenderWindow window2(VideoMode(500, 500), "TETRIS v1.2 Nom du joueur");
 					int joueurEnregistrer;
 					int reponse = 1;
 					do
 					{
+
 						saisirNomJoueur(window2, font, texture, joueur);
-						
+
 						joueurEnregistrer = listeEnregistrement(window2, joueur);
 						if (joueurEnregistrer == 1)
 						{
@@ -1124,10 +1156,44 @@ int menuOption(RenderWindow & window, Text titre[6],
 							joueur.score = 0;
 						}
 					} while (reponse != 1);
-					
 
+
+
+
+
+					windowOption.display();
+
+					if (!texture.loadFromFile("images/back_option.jpg", IntRect(90, 290, 300, 100)));
+					btnNomJoueur.setTexture(&texture);
+					texture.setSmooth(true);
+
+					btnNomJoueur.setFillColor(Color::Magenta);
+					btnNomJoueur.setOutlineThickness(0);
+					btnNomJoueur.setOutlineColor(Color::Red);
+					btnNomJoueur.setPosition(350, 550);
+
+					text.setString("Nom du joueur :"); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(375, 565);		// position du texte
+
+					windowOption.draw(btnNomJoueur);
+					windowOption.draw(text);
+
+					text.setColor(Color::Black);
+					text.setString(joueur.nomJoueur); 	// choix de la chaîne de caractères à afficher
+					text.setPosition(375, 625);		// position du texte
+
+					windowOption.draw(text);
+					windowOption.display();
+
+					if (!texture.loadFromFile("images/back_option.jpg", IntRect(450, 450, 200, 50)));
+					btnMusique.setTexture(&texture);
 				}
-
+				// Si le joueur appuie sur le bouton retour
+				else if ((event.mouseButton.x > 15 && event.mouseButton.x < 105) && (event.mouseButton.y > 15 && event.mouseButton.y < 65))
+				{
+					window.setVisible(true);
+					return 0;
+				}
 				break;
 			}
 
@@ -1156,7 +1222,6 @@ int choixMenu(RenderWindow & windowMenu, RenderWindow & window, Text titre[6],
 				//Bouton Play
 				if ((event.mouseButton.x > 350 && event.mouseButton.x < 650) && (event.mouseButton.y > 150 && event.mouseButton.y < 250))
 				{
-					
 					return 1;
 				}
 				//Bouton Option
@@ -1219,7 +1284,6 @@ void initTitre(Text titre[6], Font & font, float posx, float posy, float size)
 	titre[5].setString("S");
 	titre[5].setPosition(posx + size * 4.65, posy);
 	titre[5].setColor(Color::Yellow);
-
 }
 
 //Affiche le menu et les options
@@ -1229,122 +1293,108 @@ void afficherMenu(RenderWindow & window, Text titre[6],
 {
 	window.setVisible(false);
 	RenderWindow windowMenu(VideoMode(1000, 800), "TETRIS Menu");
-	
-	const int nbrBouton = 8;
+
+	RectangleShape btnCommencer(Vector2f(300, 100));
+	RectangleShape btnOption(Vector2f(300, 100));
+	RectangleShape btnScore(Vector2f(300, 100));
+	RectangleShape btnQuitter(Vector2f(300, 100));
 
 	Text text;
-
 	int BtnMenuChoisi;
 	Sprite  background(texture);
 
 	if (!texture.loadFromFile("images/back_main.jpg"));
-	
+	if (!font.loadFromFile("styles/font_arial.ttf"));
 
 	Image icon;
 	icon.loadFromFile("images/icon.png");
 	windowMenu.setIcon(128, 128, icon.getPixelsPtr());
 
-	boutonClick bouton[nbrBouton];
-
-	Texture textureBouton;
-
-	for (size_t i = 0; i < 5; i++)
+	do
 	{
-		titre[i].setPosition(Vector2f(350 + (i* titre[i].getCharacterSize()), 50));
-	}
-	titre[5].setPosition(Vector2f(350 + (5 * titre[5].getCharacterSize()) - 25, 50));
+		windowMenu.draw(background);
 
-	while (windowMenu.isOpen())
-	{
-		for (size_t i = 0; i < nbrBouton; i++)
-		{
-			bouton[i].rectangle.setSize(Vector2f(bouton[i].hauteur, bouton[i].largeur));
-			bouton[i].rectangle.setOutlineThickness(5);  //défini la grosseur de la bordure
-			bouton[i].rectangle.setOutlineColor(Color::Red); //défini la couleur de la bordure
-			bouton[i].text.setCharacterSize(30);
-			bouton[i].text.setColor(Color::Black);
-			bouton[i].fondImage.setSmooth(true);
-			bouton[i].text.setFont(font);
-		}
-		do
-		{
-			windowMenu.draw(background);
+		//afficheTitre(windowMenu, titre);
+		Texture textureBouton;
 
-			
-			text.setFont(font);
-			text.setColor(Color::Black);	// choix de la couleur du texte
-			text.setCharacterSize(30);		// choix de la taille des caractères exprimée en pixels, pas en points !		
+		if (!font.loadFromFile("styles/font_arial.ttf"));
+		text.setFont(font);
+		text.setColor(Color::Black);	// choix de la couleur du texte
+		text.setCharacterSize(30);		// choix de la taille des caractères exprimée en pixels, pas en points !		
 
-			
-			afficheTitre(windowMenu, titre);
+		btnCommencer.setFillColor(Color::White);
+		btnCommencer.setOutlineThickness(5);
+		btnCommencer.setOutlineColor(Color::Red);
+		btnCommencer.setPosition(350, 150);
+		windowMenu.draw(btnCommencer);
 
-			bouton[0].hauteur = 100;
-			bouton[0].largeur = 300;
-			bouton[0].rectangle.setSize(Vector2f(bouton[0].largeur, bouton[0].hauteur));
-			bouton[0].rectangle.setPosition(350, 150);
+		if (!textureBouton.loadFromFile("images/back_button.jpg", IntRect(0, 0, 200, 100)));
+		btnCommencer.setTexture(&textureBouton);
+		textureBouton.setSmooth(true);
 
-			if (!textureBouton.loadFromFile("images/back_button.jpg", IntRect(0, 0, 200, 100)));
-			bouton[0].rectangle.setTexture(&textureBouton);
+		windowMenu.draw(btnCommencer);
 
-			bouton[0].text.setString("Play :D");
-			bouton[0].text.setPosition(450, 188);
+		text.setString("Play :D"); 		// choix de la chaîne de caractères à afficher
+		text.setPosition(450, 188);		// position du texte
+		windowMenu.draw(text);
 
-			windowMenu.draw(bouton[0].rectangle);
-			windowMenu.draw(bouton[0].text);
+		btnOption.setFillColor(Color::White);
+		btnOption.setOutlineThickness(5);
+		btnOption.setOutlineColor(Color::Red);
+		btnOption.setPosition(350, 300);
 
-			bouton[1].hauteur = 100;
-			bouton[1].largeur = 300;
-			bouton[1].rectangle.setSize(Vector2f(bouton[1].largeur, bouton[1].hauteur));
-			bouton[1].rectangle.setPosition(350, 300);
+		if (!textureBouton.loadFromFile("images/back_button.jpg", IntRect(200, 500, 300, 100)));
+		btnOption.setTexture(&textureBouton);
 
-			if (!textureBouton.loadFromFile("images/back_button.jpg", IntRect(200, 500, 300, 100)));
-			bouton[1].rectangle.setTexture(&textureBouton);
+		windowMenu.draw(btnOption);
 
-			bouton[1].text.setString("Options");
-			bouton[1].text.setPosition(450, 333);
+		text.setString("Options "); 	// choix de la chaîne de caractères à afficher
+		text.setPosition(450, 333);		// position du texte
+		windowMenu.draw(text);
 
-			windowMenu.draw(bouton[1].rectangle);
-			windowMenu.draw(bouton[1].text);
+		btnScore.setFillColor(Color::White);
+		btnScore.setOutlineThickness(5);
+		btnScore.setOutlineColor(Color::Red);
+		btnScore.setPosition(350, 450);
 
+		if (!textureBouton.loadFromFile("images/back_button.jpg", IntRect(300, 300, 300, 100)));
+		btnScore.setTexture(&textureBouton);
+		textureBouton.setSmooth(true);
 
-			bouton[2].hauteur = 100;
-			bouton[2].largeur = 300;
-			bouton[2].rectangle.setSize(Vector2f(bouton[2].largeur, bouton[2].hauteur));
-			bouton[2].rectangle.setPosition(350, 450);
+		windowMenu.draw(btnScore);
 
-			if (!textureBouton.loadFromFile("images/back_button.jpg", IntRect(300, 300, 300, 100)));
-			bouton[2].rectangle.setTexture(&textureBouton);
+		text.setString("Scores ");		// choix de la chaîne de caractères à afficher
+		text.setPosition(450, 488);		// position du texte
+		windowMenu.draw(text);
 
-			bouton[2].text.setString("Scores");
-			bouton[2].text.setPosition(450, 488);
+		btnQuitter.setFillColor(Color::White);
+		btnQuitter.setOutlineThickness(5);
+		btnQuitter.setOutlineColor(Color::Red);
+		btnQuitter.setPosition(350, 600);
 
-			windowMenu.draw(bouton[2].rectangle);
-			windowMenu.draw(bouton[2].text);
+		if (!textureBouton.loadFromFile("images/back_button.jpg", IntRect(100, 500, 300, 100)));
+		btnQuitter.setTexture(&textureBouton);
+		textureBouton.setSmooth(true);
 
+		windowMenu.draw(btnQuitter);
 
-			bouton[3].hauteur = 100;
-			bouton[3].largeur = 300;
-			bouton[3].rectangle.setSize(Vector2f(bouton[3].largeur, bouton[3].hauteur));
-			bouton[3].rectangle.setPosition(350, 600);
+		text.setString("Quitter "); 	// choix de la chaîne de caractères à afficher
+		text.setPosition(450, 625);		// position du texte
+		windowMenu.draw(text);
 
-			if (!textureBouton.loadFromFile("images/back_button.jpg", IntRect(100, 500, 300, 100)));
-			bouton[3].rectangle.setTexture(&textureBouton);
+		windowMenu.display();
 
-			bouton[3].text.setString("Quitter");
-			bouton[3].text.setPosition(450, 625);
-
-			windowMenu.draw(bouton[3].rectangle);
-			windowMenu.draw(bouton[3].text);
-
-			windowMenu.display();
-
-			BtnMenuChoisi = choixMenu(windowMenu, window, titre, music, music2, music3, joueur);
+		BtnMenuChoisi = choixMenu(windowMenu, window, titre, music, music2, music3, joueur);
 
 
-		} while (BtnMenuChoisi != 1 && BtnMenuChoisi != -1);
-		windowMenu.close();
-	}
+	} while (BtnMenuChoisi != 1 && BtnMenuChoisi != -1);
+
 	window.setVisible(true);
 }
 
 
+/// Réparer l'allocation de la classe des blocs avec new, *, &, etc ? 
+/// j'ai de la difficulté à rendre ça fonctionnel
+/// ???
+/// Profit
+/// 

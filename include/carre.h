@@ -16,23 +16,26 @@ using namespace sf;
 
 /* Constantes pour les carrés */
 ///========================== */
-const Vector2f CENTRECARRE(25, 25); // Dimmensions du centre des carrés
+const Vector2f DIMCENTRECARRE(25, 25); // Dimmensions du centre des carrés
 const float BORDURECARRE = 1;		// Largeur des bordures des carrés
 const Vector2f DIMCARRE =			// Largeur des carrés dans la fenêtre
-/**/		Vector2f(CENTRECARRE.x + BORDURECARRE * 2, CENTRECARRE.y + BORDURECARRE * 2);
-const Vector2f MILLIEUCARRE =		// Point central des carrés (nécessaire?)
+/**/		Vector2f(DIMCENTRECARRE.x + BORDURECARRE * 2, DIMCENTRECARRE.y + BORDURECARRE * 2);
+const Vector2f POSMILLIEUCARRE =		// Point central des carrés (nécessaire?)
 /**/		Vector2f(DIMCARRE.x / 2, DIMCARRE.y / 2);
 /// Une autre constante RectangleShape est présente sous les prototype des fonctions
 
-/* Constantes pour les blocs */		// (Pour la formation de la forme SFML par défaut: RECT)
+
+/* Constantes pour les blocs */
 ///========================= */	
-const Color PALETTES[3][7] =
+const int NBPIECE = 5;				// Nombre de pièces accessibles au jeu
+const Color PALETTES[3][10] =		// Choix possible pour les couleurs des blocs et leurs bordures.
 {
-	{ Color::Blue, Color::Cyan, Color::Green, Color::Magenta, Color::Red, Color::White, Color::Yellow },
+	{ Color::Blue, Color(180,100,20,255), Color::Green, Color::Magenta,
+	Color::Red, Color::White, Color::Yellow, Color::Black },
 	{ Color(255,0,0,255), Color(0,255,0,255), Color(0,0,255,255), Color(255,255,0,255),
-		Color(0,255,255,255), Color(255,0,255,255), Color(120,120,120,255) },
-	{ Color(0,60,255,255), Color(20,220,255,255), Color(0,20,220,255), Color(180,25,255,255),
-		Color(0,180,255,255), Color(200,100,255,255), Color(200,200,255,255) }
+		Color(0,255,255,255), Color(255,0,255,255), Color(120,120,120,255), Color::Black },
+	{ Color(30,190,255,255), Color(20,240,255,255), Color(40,160,240,255), Color(60,110,255,255),
+		Color(0,210,255,255), Color(60,190,255,255), Color(60,240,255,255), Color::White }
 };
 const int MAXCARRE = 5;				// Nb maximal en x et en y de carrés dans un bloc
 const Vector2f PIVOTBLOC =			// Point central des blocs
@@ -42,8 +45,8 @@ const Vector2f PIVOTBLOC =			// Point central des blocs
 ///========================== */
 const int LRGJEU = 20;				// Largeur par défaut de l'occupation des salles
 const int HAUJEU = 20;				// Hauteur par défaut de l'occupation des salles
-const Vector2i PLACE((LRGJEU - 2) / 2 - 1, 0);	// Position par défaut des blocs dans la salle
-const Vector2f POS =				// Position par défaut de la salle
+const Vector2i PLACE((LRGJEU - 2) / 2 - 1, 0);	// Position par défaut des blocs dans l'aménagement
+const Vector2f POS =				// Position par défaut de l'aménagement
 /**/		Vector2f(DIMCARRE.x + 45, DIMCARRE.y + 100);
 const Vector2i COIN(0, 0);			// Position par défaut en int
 const Vector2f BASE(0, 0);			// Position par défaut en float
@@ -54,18 +57,18 @@ const Vector2f BASE(0, 0);			// Position par défaut en float
 struct carre;
 RectangleShape initRectangle(const Vector2f & dimmensions, const float & bordure,
 	const Vector2f & echelle, const Vector2f & pos, const Vector2i & place,
-	const Vector2i & origine, const Color & couleur, const Color & couleurBord);
+	const Vector2i & coin, const Color & couleur, const Color & couleurBord);
 void setDimRect(RectangleShape & rect,
 	const Vector2f & dimmensions, const float & bordure, const Vector2f & echelle);
 void setPosRect(RectangleShape & rect,
-	const Vector2f & pos, const Vector2i & place, const Vector2i & origine);
+	const Vector2f & pos, const Vector2i & place, const Vector2i & coin);
 void setCouleurRect(RectangleShape & rect,
 	const Color & couleur, const Color & couleurBord);
 
 
 /// Constante d'une forme SFML
 // Forme rectangulaire des carrés avec les valeurs de base
-const RectangleShape RECT = initRectangle(CENTRECARRE, BORDURECARRE, Vector2f(1, 1),
+const RectangleShape RECT = initRectangle(DIMCENTRECARRE, BORDURECARRE, Vector2f(1, 1),
 	POS, PLACE, Vector2i(2, 2), Color(255, 255, 255, 255), Color());
 
 
@@ -74,7 +77,7 @@ const RectangleShape RECT = initRectangle(CENTRECARRE, BORDURECARRE, Vector2f(1,
 struct carre
 {
 private:
-	Vector2i _origine = Vector2i(2, 2);	// Les coordonnées du carré dans le bloc
+	Vector2i _coin = Vector2i(2, 2);	// Les coordonnées du carré dans le bloc
 	RectangleShape _vue = RECT;			// La forme SFML du carré
 	Color _couleur = RECT.getFillColor();		// Couleur du carré avant sa transparence
 	Color _couleurBord = RECT.getOutlineColor();// Couleur de la bordure avant sa transparence
@@ -82,40 +85,39 @@ private:
 
 public:
 	/// dim		= dimenssion du bloc
-	/// pos		= position de la salle de son bloc
-	/// place	= coordonées du bloc dans la salle
-	/// origine = coordonées du carré dans le bloc
+	/// pos		= position de l'aménagement de son bloc
+	/// place	= coordonées du bloc dans l'aménagement
+	/// coin	= coordonées du carré dans le bloc
 
 	// Initialisateurs.
 	carre();
-	carre(const Vector2f & pos, const Vector2i & place, const Vector2i & origine,
+	carre(const Vector2f & pos, const Vector2i & place, const Vector2i & coin,
 		const Vector2f & dim, const float & bordure, const Vector2f & echelle,
 		const Color & couleur, const Color & couleurBord, const int & etat);
-	carre(const Vector2f & pos, const Vector2i & place, const Vector2i & origine,
+	carre(const Vector2f & pos, const Vector2i & place, const Vector2i & coin,
 		const Vector2f & dim, const float & bordure, const Vector2f & echelle, const int & etat);
-	carre(const Vector2f & pos, const Vector2i & place, const Vector2i & origine,
+	carre(const Vector2f & pos, const Vector2i & place, const Vector2i & coin,
 		const Color & couleur, const int & etat);
 	carre(const Color & couleur, const Color & couleurBord, const int & etat);
-
 
 	// Destructeurs.
 	~carre();
 
 	// Change les propriétés du rectangle.
-	void setRect(const Vector2f & pos, const Vector2i & place, const Vector2i & origine,
+	void setRect(const Vector2f & pos, const Vector2i & place, const Vector2i & coin,
 		const Vector2f & dim, const float & bordure, const Vector2f & echelle,
 		const Color & couleur, const Color & couleurBord, const int & etat);
-	void setPos(const Vector2f & pos, const Vector2i & place, const Vector2i & origine);
+	void setPos(const Vector2f & pos, const Vector2i & place, const Vector2i & coin);
 	void setDim(const Vector2f & dim, const float & bordure, const Vector2f & echelle);
 	void setCouleur(const Color & couleur, const Color & couleurBord);
 	void setVue(const RectangleShape & rect);
-	void setOrigine(const Vector2i & origine);
-	void setEncrage(const Vector2f & origine);
+	void setCoin(const Vector2i & coin);
+	void setEncrage(const Vector2f & encrage);
 	void setEtat(const int & etat);
 	void cache();
 	void montre();
 
-	// Change la position du carré dans la salle.
+	// Transforme la position du carré dans l'aménagement.
 	void deplace(const Vector2i axe);
 	void rotate(const int & degree)
 	{
@@ -143,29 +145,29 @@ public:
 carre::carre() {}
 
 // Instancie un carré avec toute les attributs qu'il peut contenir.
-carre::carre(const Vector2f & pos, const Vector2i & place, const Vector2i & origine,
+carre::carre(const Vector2f & pos, const Vector2i & place, const Vector2i & coin,
 	const Vector2f & dim, const float & bordure, const Vector2f & echelle,
 	const Color & couleur, const Color & couleurBord, const int & etat)
 {
-	setRect(pos, place, origine, dim, bordure, echelle, couleur, couleurBord, etat);
+	setRect(pos, place, coin, dim, bordure, echelle, couleur, couleurBord, etat);
 }
 
 // Instancie un carré avec ses dimmenssions et sa position.
-carre::carre(const Vector2f & pos, const Vector2i & place, const Vector2i & origine,
+carre::carre(const Vector2f & pos, const Vector2i & place, const Vector2i & coin,
 	const Vector2f & dim, const float & bordure, const Vector2f & echelle, const int & etat)
 {
-	setOrigine(origine);
-	setPosRect(_vue, pos, place, _origine);
+	setCoin(coin);
+	setPosRect(_vue, pos, place, _coin);
 	setDimRect(_vue, dim, bordure, echelle);
 	setEtat(etat);
 }
 
 // 
-carre::carre(const Vector2f & pos, const Vector2i & place, const Vector2i & origine,
+carre::carre(const Vector2f & pos, const Vector2i & place, const Vector2i & coin,
 	const Color & couleur, const int & etat)
 {
-	setOrigine(origine);
-	setPosRect(_vue, pos, place, _origine);
+	setCoin(coin);
+	setPosRect(_vue, pos, place, _coin);
 	setCouleur(couleur, Color());
 	setEtat(etat);
 }
@@ -185,20 +187,20 @@ carre::~carre()
 }
 
 // Change toules les valeurs du carré.
-void carre::setRect(const Vector2f & pos, const Vector2i & place, const Vector2i & origine,
+void carre::setRect(const Vector2f & pos, const Vector2i & place, const Vector2i & coin,
 	const Vector2f & dim, const float & bordure, const Vector2f & echelle,
 	const Color & couleur, const Color & couleurBord, const int & etat)
 {
-	setOrigine(origine);
-	setVue(initRectangle(dim, bordure, echelle, pos, place, _origine, couleur, couleurBord));
+	setCoin(coin);
+	setVue(initRectangle(dim, bordure, echelle, pos, place, _coin, couleur, couleurBord));
 	setEtat(etat);
 }
 
-// Change la position du carré dans son bloc et dans la salle.
-void carre::setPos(const Vector2f & pos, const Vector2i & place, const Vector2i & origine)
+// Change la position du carré dans son bloc et dans l'aménagement.
+void carre::setPos(const Vector2f & pos, const Vector2i & place, const Vector2i & coin)
 {
-	setOrigine(origine);
-	setPosRect(_vue, pos, place, _origine);
+	setCoin(coin);
+	setPosRect(_vue, pos, place, _coin);
 }
 
 // Change les dimmenssions du carré.
@@ -223,19 +225,18 @@ void carre::setVue(const RectangleShape & rect)
 }
 
 // Change les coordonnés du carré dans le bloc.
-void carre::setOrigine(const Vector2i & origine)
+void carre::setCoin(const Vector2i & coin)
 {
-	_origine = origine;
+	_coin = coin;
 }
 
 // Change le point des transformations faites sur le carré.
-void carre::setEncrage(const Vector2f & origine)
-
+void carre::setEncrage(const Vector2f & encrage)
 {
 	// Point d'encrage du carré dans le bloc
 	_vue.setOrigin(Vector2f(
-		DIMCARRE.x * origine.x + 100,
-		DIMCARRE.y * origine.y));
+		PIVOTBLOC.x - DIMCARRE.x * (_coin.x + encrage.x),
+		PIVOTBLOC.y - DIMCARRE.y * (_coin.y + encrage.y)));
 }
 
 // Change l'état du carré.
@@ -282,19 +283,19 @@ Color carre::getColor()
 // Retourne les coordonnées du carré dans son bloc
 Vector2i carre::getPos()
 {
-	return _origine;
+	return _coin;
 }
 
 // Retourne la position du carré en x dans son bloc.
 int carre::getX()
 {
-	return _origine.x;
+	return _coin.x;
 }
 
 // Retourne la position du carré en y dans son bloc.
 int carre::getY()
 {
-	return _origine.y;
+	return _coin.y;
 }
 
 // Retourne l'état du carré.
@@ -314,7 +315,7 @@ void carre::montre(RenderWindow & window, const Vector2f & coin)
 {
 	Vector2f ancien = _vue.getPosition();
 
-	setPosRect(_vue, coin, Vector2i(1, 0), _origine);
+	setPosRect(_vue, coin, Vector2i(1, 0), _coin);
 	window.draw(_vue);
 
 	_vue.setPosition(ancien);
@@ -326,11 +327,11 @@ void carre::montre(RenderWindow & window, const Vector2f & coin)
 // Forme un carré selon les critères voulu.
 RectangleShape initRectangle(const Vector2f & dimmensions, const float & bordure,
 	const Vector2f & echelle, const Vector2f & pos, const Vector2i & place,
-	const Vector2i & origine, const Color & couleur, const Color & couleurBord)
+	const Vector2i & coin, const Color & couleur, const Color & couleurBord)
 {
 	RectangleShape rect;
 	setDimRect(rect, dimmensions, bordure, echelle);
-	setPosRect(rect, pos, place, origine);
+	setPosRect(rect, pos, place, coin);
 	setCouleurRect(rect, couleur, couleurBord);
 
 	return rect;
@@ -346,14 +347,14 @@ void setDimRect(RectangleShape & rect,
 }
 
 /// Modifie la position et le point pivot du carré.
-// / pos =		position de la salle dans la fenêtre
-// / place =		coordonées du bloc dans la salle
-// / origine =	coordonées du carré dans le bloc
+// / pos =		position de l'aménagement dans la fenêtre
+// / place =		coordonées du bloc dans l'aménagement
+// / coin =		coordonées du carré dans le bloc
 void setPosRect(RectangleShape & rect,
-	const Vector2f & pos, const Vector2i & place, const Vector2i & origine)
+	const Vector2f & pos, const Vector2i & place, const Vector2i & coin)
 {
-	assert(origine.x >= 0 && origine.x < MAXCARRE &&
-		origine.y >= 0 && origine.y < MAXCARRE &&
+	assert(coin.x >= 0 && coin.x < MAXCARRE &&
+		coin.y >= 0 && coin.y < MAXCARRE &&
 		place.x > -2 && place.x <= LRGJEU - 1 &&
 		place.y >= 0 && place.y <= HAUJEU - 1);
 
@@ -361,8 +362,8 @@ void setPosRect(RectangleShape & rect,
 		pos.x + (DIMCARRE.x * place.x),
 		pos.y + (DIMCARRE.y * place.y)));
 	rect.setOrigin(Vector2f(			// Point d'encrage du carré dans le bloc
-		PIVOTBLOC.x - (DIMCARRE.x * origine.x),
-		PIVOTBLOC.y - (DIMCARRE.y * origine.y)));
+		PIVOTBLOC.x - (DIMCARRE.x * coin.x),
+		PIVOTBLOC.y - (DIMCARRE.y * coin.y)));
 }
 
 // Modifie les couleurs du carré.
