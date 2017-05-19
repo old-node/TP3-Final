@@ -51,7 +51,7 @@ const bloc TETRIS = *tetris;
 
 /* Constantes pour les salles */
 ///========================== */
-const int LRGPOLICE = 24;
+const int LRGPOLICE = 30;
 const int NBCHARMAX = 30;				// Nb de caractère maximum dans un message
 const Vector2f DIMSALLE					// Dimmension par défaut de la salle
 /**/(DIMCARRE.x * LRGJEU, DIMCARRE.y * HAUJEU);
@@ -89,9 +89,7 @@ private:
 	int _orientation = 1;				// Si on fait tourner la salle
 
 	identite _joueur;					// Joueur de la salle et ses attributs
-	string _nomJoueur = "Joueur";		// Nom du joueur
 	int _noJoueur = 0;					// En mode multijoueur de 1 à 2. Permet d'utiliser les bon contrôles
-	int _points = 0;					// Score que le joueur à accumulé
 	bool _colle = false;				// État du jeu lorsqu'un bloc reste piégé (Passe au prochain avec colle)
 	bool _permis = true;				// Si vrai, laisse le joueur faire des actions
 	int _nbBombe = 1;					// Autre option lol
@@ -156,7 +154,7 @@ public:
 	void setOrientation(int orientation);
 	void setNomJoueur(string nomJoueur);
 	void setNoJoueur(int noJoueur);
-	void setPoints(int points);
+
 	void setColle(bool colision);
 	void setNbBombe(int nbBombe);
 	void setVitesse(Time vitesse);
@@ -200,7 +198,7 @@ public:
 		return _joueur;
 	}
 	int getNoJoueur();
-	int getPoints();
+
 	int getNbBombe();
 	bool getColle();
 	int getStyleBloc();
@@ -269,8 +267,7 @@ salle::~salle()
 	_boite = _statistiques = RectangleShape();
 
 	_joueur.~identite();	/// Peut-on utiliser delete au lieu?
-	_nomJoueur = "";
-	_pos.x = _pos.y = _noNiveau = _noJoueur = _points = _colle = _nbBombe =
+	_pos.x = _pos.y = _noNiveau = _noJoueur = _colle = _nbBombe =
 		_styleBlocs = _orientation = 0;
 	_vitesseBloc.Zero;
 	videOccupations();
@@ -308,7 +305,6 @@ void salle::init(Vector2f pos, int noNiveau, int orientation,
 	setOrientation(orientation);
 	setOccupationAbsolue(occupation);
 	setNoJoueur(noJoueur);
-	setPoints(points);
 	setNbBombe(nbBombe);
 	setVitesse(vitesse);
 	initBlocsJeu(blocsJeu, nbPiece);
@@ -394,40 +390,37 @@ void salle::initStatistiques()
 	_statistiques.setSize(Vector2f(300, DIMSALLE.y + LRGPOLICE * 5));
 	_statistiques.setPosition(posAffiche);
 	_statistiques.setFillColor(couleurStat);
-	_statistiques.setOutlineThickness(bordure);
-	_statistiques.setOutlineColor(couleurBordStat);
+	
+
 
 	decalage.x += LRGPOLICE;
-	_prochaine = initText(_police, "Prochaine piece", LRGPOLICE,
-		Color::Black, posAffiche, decalage);
+	/*_prochaine = initText(_police, "Prochaine piece", LRGPOLICE,
+		Color::Black, posAffiche, decalage);*/
 
 	decalage.y = LRGPOLICE * 2;
 	_fenetrePiecesSuivante.setSize(Vector2f(PIVOTBLOC.x * 2.4, PIVOTBLOC.y * 1.9));
-	_fenetrePiecesSuivante.setPosition(posAffiche.x, posAffiche.y + decalage.y);
+	_fenetrePiecesSuivante.setPosition(posAffiche.x + (decalage.x * 2.5), posAffiche.y + (decalage.y*1.5));
 	_fenetrePiecesSuivante.setFillColor(Color::Black);
 	_fenetrePiecesSuivante.setOutlineThickness(bordure);
 	_fenetrePiecesSuivante.setOutlineColor(couleurBordStat);
 
 	decalage = BASE;
-	decalage.y = PIVOTBLOC.y * 2.5 + LRGPOLICE;
-	_textLevel = initText(_police, "Niveau : ", LRGPOLICE,
+	decalage.y = PIVOTBLOC.y * 3.5 + LRGPOLICE;
+	_textLevel = initText(_police, "Level : ", LRGPOLICE,
 		Color::Black, posAffiche, decalage);
 
 	decalage.y = LRGPOLICE;
-	_textNom = initText(_police, _nomJoueur, LRGPOLICE,
+	_textNom = initText(_police, _joueur.nomJoueur, LRGPOLICE,
 		Color::Black, posAffiche, decalage);
 
-	_textLigne = initText(_police, "Lignes faites : ", LRGPOLICE,
+	_textLigne = initText(_police, "Score :", LRGPOLICE,
 		Color::Black, posAffiche, decalage);
 
 	decalage.y = LRGPOLICE * 2;
-	_textScore = initText(_police, "Score : ", LRGPOLICE,
+	_textScore = initText(_police, "Controles \n Z : Tourne a gauche \n X : Tourne a droite \n P : Pause \n M : Sourdine \n T : Musique \n Q : Options \n Esc : Menu", LRGPOLICE,
 		Color::Black, posAffiche, decalage);
 
-	decalage.y = LRGPOLICE * 1.5;
-	_textAide = initText(_police,
-		"     Controles \n Z : Tourne a gauche \n X : Tourne a droite \n P : Pause \n M : Sourdine \n T : Musique \n Q : Options \n Esc : Menu",
-		LRGPOLICE, Color::Black, posAffiche, decalage);
+	
 }
 
 // 
@@ -451,7 +444,7 @@ void salle::setOrientation(int orientation)
 // 
 void salle::setNomJoueur(string nomJoueur)
 {
-	_nomJoueur = nomJoueur;
+	_joueur.nomJoueur = nomJoueur;
 }
 
 // 
@@ -462,10 +455,7 @@ void salle::setNoJoueur(int noJoueur)
 }
 
 // 
-void salle::setPoints(int points)
-{
-	_points = points;
-}
+
 
 // 
 void salle::setColle(bool colision)
@@ -538,7 +528,7 @@ void salle::prochain()
 // Retourne le nom du joueur.
 string salle::getNomJoueur()
 {
-	return _nomJoueur;;
+	return _joueur.nomJoueur;
 }
 
 // Retourne la position de la salle dans la fenêtre.
@@ -560,10 +550,7 @@ int salle::getNoJoueur()
 }
 
 // Retourne le nombre de points du joueur.
-int salle::getPoints()
-{
-	return _points;
-}
+
 
 // Retourne si le bloc actif se figera.
 bool salle::getColle()
@@ -810,6 +797,7 @@ void salle::colleActif()
 		_blocActif.getAxes(_blocActif.getAngle()), 
 		_blocActif.getPlace());
 	_blocsFixes.push_back(_blocActif);
+	_joueur.score += 25;
 	prochain();
 }
 
@@ -822,8 +810,8 @@ void salle::afficherInterface()
 	_window.draw(_prochaine);
 	_window.draw(_fenetrePiecesSuivante);
 	_blocProchain.montre(_window, Vector2f(
-		POSAFFICHE.x + PIVOTBLOC.x * 0.75,
-		POSAFFICHE.y + PIVOTBLOC.y * 1.6));
+		POSAFFICHE.x + PIVOTBLOC.x * 1.5,
+		POSAFFICHE.y + PIVOTBLOC.y * 2.2));
 
 	_window.draw(_textLevel);
 	_window.draw(_textNom);
